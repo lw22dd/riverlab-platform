@@ -67,9 +67,11 @@ nul
 /riverlab-light-redesign-v1.html
 
 # ============================================================
-# 源码目录中的未使用素材与临时说明
+# 源码目录中的未使用素材、临时说明与本地展示页
 # ============================================================
 /panorama/src/assets/
 /simulation/frontend/simulation/assets/
 /simulation/frontend/simulation/AGENT.md
 /simulation/package-lock.json
+/simulation/frontend/simulation/showcase/
+/showcase-dist/
