@@ -1,38 +1,45 @@
-# 前端忽略文件
-frontend/node_modules
-frontend/dist
-frontend/dist-ssr
-frontend/*.local
-frontend/logs
-frontend/*.log
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-frontend/pnpm-debug.log*
-frontend/lerna-debug.log*
+# 依赖与构建产物（源码与 package-lock.json 不排除）
+**/node_modules
+**/dist
+**/dist-ssr
+**/.vite
+**/coverage
 
-# 后端忽略文件
-backend/debug.log
-backend/*.exe
-backend/*.out
-backend/*.o
+# 版本控制与 IDE
+**/.git
+**/.vscode
+**/.trae
+**/.idea
 
-# 通用忽略文件
-.git
-.trae
-*.swp
-*.swo
-*~
-.DS_Store
-.env
-.env.local
-.env.*.local
+# 日志与可执行文件
+**/*.log
+**/*.exe
+**/*.out
+**/*.o
+**/api-test.exe
 
-# IDE 目录
-.idea
-.vscode/*
-!.vscode/extensions.json
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+# 本地临时截图/缓存
+**/.screenshots
+**/.tmp-shots
+**/.uploads
+
+# 部署密钥（保留 .env.example；前端构建所需的 .env 不排除）
+deploy/.env
+deploy/.env.local
+
+# 大体积备份、素材与原型（不参与镜像构建）
+文档备份
+前端设计原型
+都江堰素材
+**/参考
+assets
+.doc_work
+.fmt_work
+
+# 旧目录（已迁移到 simulation/frontend/simulation/backend 与 panorama/）
+webGL-720yun
+
+# 根目录压缩包与位图素材
+/*.zip
+/*.png
+/*.docx

@@ -1,0 +1,200 @@
+package router
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"webGL-720yun/internal/core/middleware"
+	"webGL-720yun/internal/resource/handler"
+	resService "webGL-720yun/internal/resource/service"
+	"webGL-720yun/internal/resource/upload"
+	simulationHandler "webGL-720yun/internal/simulation/handler"
+	simulationService "webGL-720yun/internal/simulation/service"
+	"webGL-720yun/internal/slice"
+	sliceHandler "webGL-720yun/internal/slice/handler"
+	sliceService "webGL-720yun/internal/slice/service"
+	userHandler "webGL-720yun/internal/user/handler"
+	userService "webGL-720yun/internal/user/service"
+	"webGL-720yun/pkg/jwt"
+	"webGL-720yun/pkg/minio_client"
+	"webGL-720yun/pkg/redis"
+	"webGL-720yun/pkg/websocket"
+)
+
+type ServiceContext struct {
+	UserService    *userService.UserService
+	SpaceService   *resService.SpaceService
+	SceneService   *resService.SceneService
+	HotspotService *resService.HotspotService
+	UploadService  *upload.UploadService
+	AuthMiddleware *middleware.AuthMiddleware
+	RBACMiddleware *middleware.RBACMiddleware
+	MinIOClient    *minio_client.MinIOClient
+	RedisService   *redis.RedisService
+	JWTService     *jwt.JWTService
+	WsHub          *websocket.Hub
+	SliceQueue     *sliceService.SliceQueue
+	Scheduler      *slice.SliceScheduler
+
+	SimulationSessionService   *simulationService.SessionService
+	SimulationAnalyticsService *simulationService.AnalyticsService
+}
+
+func RegisterRoutes(r *gin.Engine, ctx *ServiceContext) {
+	userService := ctx.UserService
+	spaceService := ctx.SpaceService
+	sceneService := ctx.SceneService
+	hotspotService := ctx.HotspotService
+	uploadService := ctx.UploadService
+	authMiddleware := ctx.AuthMiddleware
+	wsHub := ctx.WsHub
+	sliceQueue := ctx.SliceQueue
+
+	api := r.Group("/api/v1")
+	{
+		auth := api.Group("/auth")
+		{
+			auth.POST("/login", userHandler.Login(userService))
+			auth.POST("/refresh", userHandler.RefreshToken(userService))
+		}
+
+		userGroup := api.Group("/user")
+		{
+			userGroup.POST("/register", userHandler.Register(userService))
+
+			userGroup.Use(authMiddleware.RequireAuth())
+			{
+				userGroup.GET("/profile", userHandler.GetProfile(userService))
+				userGroup.PUT("/profile", userHandler.UpdateProfile(userService))
+				userGroup.POST("/change-password", userHandler.ChangePassword(userService))
+				userGroup.POST("/logout", userHandler.Logout(userService))
+
+				admin := userGroup.Group("/admin")
+				admin.Use(authMiddleware.RequireAdmin())
+				{
+					admin.GET("/list", userHandler.GetUserList(userService))
+					admin.GET("/:id", userHandler.GetUserByID(userService))
+					admin.POST("/create", userHandler.Register(userService))
+					admin.PUT("/:id", userHandler.UpdateUser(userService))
+					admin.DELETE("/:id", userHandler.DeleteUser(userService))
+					admin.DELETE("/batch", userHandler.DeleteUserBatch(userService))
+					admin.POST("/batch-register", userHandler.BatchRegister(userService))
+				}
+			}
+		}
+
+		resourceGroup := api.Group("/resource")
+		resourceGroup.Use(authMiddleware.RequireAuth())
+		{
+			spaces := resourceGroup.Group("/spaces")
+			{
+				spaces.GET("", handler.GetSpaceList(spaceService))
+				spaces.GET("/:id", handler.GetSpaceDetail(spaceService))
+				spaces.GET("/:id/graph", handler.GetSpaceGraph(sceneService))
+				spaces.POST("", authMiddleware.RequireAdmin(), handler.CreateSpace(spaceService))
+				spaces.PUT("/:id", handler.UpdateSpace(spaceService))
+				spaces.DELETE("/:id", handler.DeleteSpace(spaceService))
+				spaces.DELETE("/batch", authMiddleware.RequireAdmin(), handler.DeleteSpaceBatch(spaceService))
+			}
+
+			scenes := resourceGroup.Group("/scenes")
+			{
+				scenes.GET("", handler.GetSceneList(sceneService))
+				scenes.GET("/:id", handler.GetSceneDetail(sceneService))
+				scenes.POST("", authMiddleware.RequireAdmin(), handler.CreateScene(sceneService))
+				scenes.PUT("/:id", handler.UpdateScene(sceneService))
+				scenes.PUT("/:id/position", handler.UpdateScenePosition(sceneService))
+				scenes.PUT("/batch-position", handler.BatchUpdateScenePosition(sceneService))
+				scenes.DELETE("/:id", handler.DeleteScene(sceneService))
+				scenes.POST("/batch-import", authMiddleware.RequireAdmin(), handler.BatchImportScenes(sceneService))
+			}
+
+			hotspots := resourceGroup.Group("/hotspots")
+			{
+				hotspots.GET("", handler.GetHotspotList(hotspotService))
+				hotspots.GET("/:id", handler.GetHotspotDetail(hotspotService))
+				hotspots.POST("", authMiddleware.RequireAdmin(), handler.CreateHotspot(hotspotService))
+				hotspots.PUT("/:id", handler.UpdateHotspot(hotspotService))
+				hotspots.DELETE("/:id", handler.DeleteHotspot(hotspotService))
+			}
+		}
+
+		uploadGroup := api.Group("/upload")
+		uploadGroup.Use(authMiddleware.RequireAuth())
+		{
+			uploadGroup.POST("/init", upload.InitUpload(uploadService))
+			uploadGroup.POST("/chunk", upload.UploadChunk(uploadService))
+			uploadGroup.POST("/complete", upload.CompleteUpload(uploadService))
+			uploadGroup.GET("/status/:upload_id", upload.GetUploadStatus(uploadService))
+			uploadGroup.DELETE("/:upload_id", upload.CancelUpload(uploadService))
+			uploadGroup.GET("/file/:file_id", upload.GetFileInfo(uploadService))
+		}
+
+		sliceGroup := api.Group("/slice")
+		sliceGroup.Use(authMiddleware.RequireAuth())
+		{
+			sliceGroup.GET("/queue/status/:task_id", sliceHandler.GetSliceQueueStatus(sliceQueue))
+			sliceGroup.GET("/queue/stats", sliceHandler.GetSliceQueueStats(sliceQueue))
+		}
+
+		simGroup := api.Group("/sim")
+		simGroup.Use(authMiddleware.RequireAuth())
+		{
+			simGroup.POST("/sessions", simulationHandler.Submit(ctx.SimulationSessionService))
+			simGroup.GET("/sessions", simulationHandler.ListSessions(ctx.SimulationSessionService))
+			simGroup.GET("/sessions/:id", simulationHandler.GetSessionByID(ctx.SimulationSessionService))
+
+			analytics := simGroup.Group("/analytics")
+			{
+				analytics.GET("/overview", simulationHandler.AnalyticsOverview(ctx.SimulationAnalyticsService))
+				analytics.GET("/scenarios", simulationHandler.AnalyticsScenarios(ctx.SimulationAnalyticsService))
+				analytics.GET("/decisions", simulationHandler.AnalyticsDecisions(ctx.SimulationAnalyticsService))
+				analytics.GET("/rules", simulationHandler.AnalyticsRules(ctx.SimulationAnalyticsService))
+				analytics.GET("/classes/:id", simulationHandler.AnalyticsClasses(ctx.SimulationAnalyticsService))
+				analytics.GET("/export.csv", simulationHandler.ExportCSV(ctx.SimulationAnalyticsService))
+			}
+		}
+
+		wsGroup := api.Group("/ws")
+		wsGroup.Use(authMiddleware.RequireAuth())
+		{
+			wsGroup.GET("", websocket.HandleWebSocket(wsHub))
+		}
+
+		resGroup := api.Group("/res")
+		{
+			resGroup.GET("/tiles/:sceneCode/:face/:level/:x/:y", handler.GetTile(sceneService))
+			resGroup.HEAD("/tiles/:sceneCode/:face/:level/:x/:y", handler.GetTile(sceneService))
+			resGroup.GET("/previews/:sceneCode", handler.GetPreview(sceneService))
+			resGroup.HEAD("/previews/:sceneCode", handler.GetPreview(sceneService))
+			resGroup.GET("/sources/:sceneCode", handler.GetSource(sceneService))
+			resGroup.HEAD("/sources/:sceneCode", handler.GetSource(sceneService))
+			resGroup.GET("/covers/:spaceName", handler.GetCover(sceneService))
+			resGroup.HEAD("/covers/:spaceName", handler.GetCover(sceneService))
+		}
+	}
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"time":   time.Now().Format(time.RFC3339),
+		})
+	})
+}
+
+func NewUploadService(db *gorm.DB, minioClient *minio_client.MinIOClient, redisService *redis.RedisService, wsHub *websocket.Hub, sliceQueue *sliceService.SliceQueue) *upload.UploadService {
+	uploadRepo := upload.NewUploadRepository(redisService, db)
+	return upload.NewUploadService(uploadRepo, db, minioClient, wsHub, sliceQueue)
+}
+
+func NewSliceQueue(redisService *redis.RedisService) *sliceService.SliceQueue {
+	return sliceService.NewSliceQueue(redisService)
+}
+
+func NewSliceScheduler(queue *sliceService.SliceQueue, db *gorm.DB, minioClient *minio_client.MinIOClient, wsHub *websocket.Hub, workerCount int) *slice.SliceScheduler {
+	processor := slice.NewSliceProcessor(db, minioClient, wsHub)
+	return slice.NewSliceScheduler(queue, processor, workerCount)
+}

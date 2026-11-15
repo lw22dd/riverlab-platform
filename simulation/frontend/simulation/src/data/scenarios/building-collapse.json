@@ -1,0 +1,891 @@
+{
+  "id": "building-collapse",
+  "title": "安和里 3 号楼事故复盘",
+  "subtitle": "九天工期内的现场处置记录",
+  "tagline": "污水接口、南门减速带和基坑东侧护栏，都留在了同一份调查时间线里。",
+  "description": "你担任安和里雨污分流改造的安全负责人。总工期还剩 9 天，3 号楼基础附近出现污水渗漏；南门外就是小学，基坑东侧还缺一面标准护栏。请按现场记录作出处置，并在联合调查中提交相应证据。",
+  "domain": "collapse",
+  "version": "1.0.0",
+  "difficulty": "挑战",
+  "estimatedMinutes": 11,
+  "tags": ["雨污改造", "校园周边", "临边防护", "调查留痕"],
+  "brief": {
+    "role": "安和里社区改造项目安全负责人",
+    "premise": "开工第 19 天，巡检发现污水管接口错位，渗漏已接近 3 号楼基础。南门减速带被施工车压成三段，基坑东侧因护栏材料不足仍有缺口。",
+    "objective": "核对管网、南门交通和基坑临边的现场情况，作出处置并保留记录，随后向联合调查组说明签字和指令经过。",
+    "constraints": [
+      "距总工期结束还有 9 天",
+      "3 号楼建于 2008 年，为六层砖混结构",
+      "小学紧邻南门，放学时间为 17:10",
+      "夜间安排 2 名人员值守"
+    ],
+    "ethicsLens": "从巡检、整改和签字记录核查预防责任：已知问题是否及时隔离，赶工决定是否留下依据，调查材料能否还原经手过程。",
+    "safetyNotice": "坍塌过程采用抽象动画表现，不展示真实伤亡细节。"
+  },
+  "metrics": [
+    {
+      "key": "structural",
+      "label": "楼体稳定",
+      "shortLabel": "稳定",
+      "description": "根据基础受水、承重构件和邻近基坑作业情况，评估 3 号楼的稳定状态。",
+      "initial": 72,
+      "weight": 0.3,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "compliance",
+      "label": "施工合规",
+      "shortLabel": "合规",
+      "description": "核查停工检测、校园周边交通设施和深基坑临边防护是否按规定执行并验收。",
+      "initial": 74,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "risk",
+      "label": "现场处置",
+      "shortLabel": "处置",
+      "description": "衡量隐患是否被查明和隔离，以及监测、值守能否持续覆盖尚未消除的问题。",
+      "initial": 68,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "transparency",
+      "label": "记录公开",
+      "shortLabel": "公开",
+      "description": "核查检测附件、施工变更、监测数据和事故材料是否完整提交给监管方及相关公众。",
+      "initial": 66,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "accountability",
+      "label": "调查配合",
+      "shortLabel": "担责",
+      "description": "根据签字、指令和沟通材料，判断当事人是否如实说明本人及总包、分包各自的经手事项。",
+      "initial": 68,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    }
+  ],
+  "startNodeId": "c_intro",
+  "nodes": [
+    {
+      "id": "c_intro",
+      "type": "narrative",
+      "title": "开工第 19 天的巡检",
+      "kicker": "PROLOGUE / 16:20",
+      "speaker": "现场巡检记录",
+      "focus": "overview",
+      "ambience": "calm",
+      "text": "16:20，你沿 3 号楼检查雨污分流沟槽。巡检表注明：楼体建于 2008 年，为六层砖混结构，基础埋深 1.8 米；外墙吊篮仍在作业。施工员把工期表发到群里：『还剩 9 天，今天准备把管网接完。』你让他先带你看第三段接口。南门外的学校将在 17:10 放学，夜班仍按两人值守排班。",
+      "next": "c_sewage"
+    },
+    {
+      "id": "c_sewage",
+      "type": "decision",
+      "title": "第三段接口正在渗水",
+      "kicker": "DECISION 01 / 管网开挖面",
+      "prompt": "施工员掀开第三段接口旁的覆盖物：『这里错位了，黑水正往基础回填土里渗。安全负责人，接下来怎么干？』",
+      "context": "监理核算后说明，停工抽排和检测至少占用两天；直接用快干水泥封堵可维持进度，但管壁是否继续漏水、回填土内是否已有空洞，现场尚无检测依据。",
+      "focus": "sewage",
+      "options": [
+        {
+          "id": "c_sewage_report",
+          "label": "停下第三段，抽排后检测基础",
+          "summary": "通知监理封闭作业面并上报，抽排污水，委托第三方检测基础含水率和空洞情况。",
+          "detail": "回填暂缓，工期至少延后两天。检测点、原始数据和现场照片一并归档，查明管壁与土体状况后再安排复工。",
+          "tone": "positive",
+          "badge": "先查后复工",
+          "tags": ["停工抽排", "第三方检测"],
+          "effects": [
+            { "type": "stage", "action": "sewage:report", "label": "抽排检测" },
+            { "type": "flag", "key": "sewage", "value": "report" },
+            { "type": "metric", "key": "structural", "delta": 4, "reason": "基础附近污水已抽排并安排检测" },
+            { "type": "metric", "key": "transparency", "delta": 3, "reason": "检测附件与现场照片归档" }
+          ],
+          "next": "c_after_sewage"
+        },
+        {
+          "id": "c_sewage_seal",
+          "label": "快干水泥封接口，随后回填",
+          "summary": "施工员按原进度封住错位接口，外观处理完成后继续回填。",
+          "detail": "接口表面可以修好，已进入回填土的污水和可能形成的空洞仍未检测，监理无法据此确认基础附近土体状况。",
+          "tone": "caution",
+          "badge": "封堵回填",
+          "tags": ["快干水泥", "按原进度施工"],
+          "effects": [
+            { "type": "stage", "action": "sewage:seal", "label": "封堵后回填" },
+            { "type": "flag", "key": "sewage", "value": "seal" },
+            { "type": "metric", "key": "structural", "delta": -5, "reason": "回填土内已渗入的污水未处理" },
+            { "type": "metric", "key": "compliance", "delta": -4, "reason": "管线破损未走停工检测程序" }
+          ],
+          "next": "c_after_sewage"
+        },
+        {
+          "id": "c_sewage_divert",
+          "label": "夜间敷设暗管，接入雨水口",
+          "summary": "绕开处理设施，把污水临时引入市政雨水口，最终排向河道。",
+          "detail": "作业面很快能见干，但暗管排放未履行审批，基础附近的渗流路径也未查明；随后恢复现场会掩盖排放和渗漏痕迹。",
+          "tone": "danger",
+          "badge": "违规引流",
+          "tags": ["雨水口排污", "隐瞒排放"],
+          "effects": [
+            { "type": "stage", "action": "sewage:divert", "label": "暗管引流" },
+            { "type": "flag", "key": "sewage", "value": "divert" },
+            { "type": "metric", "key": "structural", "delta": -7, "reason": "基础周边仍受污水浸泡" },
+            { "type": "metric", "key": "compliance", "delta": -12, "reason": "未经许可排污并绕开监管" },
+            { "type": "metric", "key": "transparency", "delta": -8, "reason": "排放痕迹被人为清理" }
+          ],
+          "next": "c_after_sewage"
+        },
+        {
+          "id": "c_sewage_monitor",
+          "label": "布好监测点，接口暂不维修",
+          "summary": "增设沉降与含水率监测点，施工继续进行，由值班人员读取并上报数据。",
+          "detail": "监测能帮助发现异常，破损接口却仍在渗水；只要未停工隔离，数据只能记录变化，回填土仍会继续受到影响。",
+          "tone": "caution",
+          "badge": "边测边干",
+          "tags": ["监测预警", "破损未修"],
+          "effects": [
+            { "type": "stage", "action": "sewage:monitor", "label": "监测中施工" },
+            { "type": "flag", "key": "sewage", "value": "monitor" },
+            { "type": "metric", "key": "structural", "delta": -3, "reason": "破损接口仍在向基础附近渗漏" },
+            { "type": "metric", "key": "risk", "delta": -5, "reason": "已查明的问题未先隔离" }
+          ],
+          "next": "c_after_sewage"
+        }
+      ]
+    },
+    {
+      "id": "c_after_sewage",
+      "type": "narrative",
+      "title": "17:05 的南门巡查",
+      "kicker": "17:05 / 社区南门",
+      "speaker": "监理巡查记录",
+      "focus": "school",
+      "ambience": "tense",
+      "text": "小学广播已经播放放学提示。监理在南门拍下减速带现状：上午经过的混凝土车把它压成三段，碎石露在路面。施工便道和家长接送共用这条不足六米宽的路。一辆工程车正倒车进入路口，家长在后方拉住孩子。施工员在群里问：『这里先清掉，车好倒一些，行不行？』",
+      "next": "c_speed"
+    },
+    {
+      "id": "c_speed",
+      "type": "decision",
+      "title": "减速带损坏后的放行安排",
+      "kicker": "DECISION 02 / 南门",
+      "prompt": "离 17:10 放学只有几分钟，损坏的减速带要怎么处理？",
+      "context": "按标准重装需封闭半幅道路两小时；用现场材料临时铺垫约需十分钟。工程车司机已在群里提出，希望把残余部分全部清走，先让车辆通过。",
+      "focus": "school",
+      "options": [
+        {
+          "id": "c_speed_standard",
+          "label": "封半幅两小时，重装 10cm 减速带",
+          "summary": "按规范安装标准橡胶减速带，同时补齐反光警示，施工和验收情况记入交通设施变更单。",
+          "detail": "封路的两小时会增加接送和施工通行的等待；安装完成后，凸起和反光警示可在重车继续通行时发挥限速作用。",
+          "tone": "positive",
+          "badge": "标准设施",
+          "tags": ["10cm 减速带", "反光警示"],
+          "effects": [
+            { "type": "stage", "action": "speed:standard", "label": "重装减速带" },
+            { "type": "flag", "key": "speed", "value": "standard" },
+            { "type": "metric", "key": "compliance", "delta": 5, "reason": "校门前交通设施按标准恢复" },
+            { "type": "metric", "key": "risk", "delta": 5, "reason": "车辆经过接送路段前被迫减速" }
+          ],
+          "next": "c_guard"
+        },
+        {
+          "id": "c_speed_temp",
+          "label": "铺碎石木板，先撑过放学高峰",
+          "summary": "用十分钟垫出一处临时凸起，让车辆经过时减速，稍后再处理正式设施。",
+          "detail": "这种铺法的高度难以保持一致，混凝土车再次碾压后可能松散或移位，交接班时需要继续检查。",
+          "tone": "caution",
+          "badge": "应急铺垫",
+          "tags": ["碎石木板", "高峰应急"],
+          "effects": [
+            { "type": "stage", "action": "speed:temporary", "label": "铺设临时凸起" },
+            { "type": "flag", "key": "speed", "value": "temp" },
+            { "type": "metric", "key": "compliance", "delta": -4, "reason": "临时铺垫未达到校门前设施标准" },
+            { "type": "metric", "key": "risk", "delta": -3, "reason": "重车碾压后凸起可能失效" }
+          ],
+          "next": "c_guard"
+        },
+        {
+          "id": "c_speed_remove",
+          "label": "清净残余减速带，让工程车先走",
+          "summary": "把断裂部分全部移走，放学时段临时增派一名安全员在路边疏导。",
+          "detail": "工程车倒车和通行会顺畅一些，路面却不再有任何强制减速设施；安全员离岗或视线受阻时，车辆仍可按原速度通过。",
+          "tone": "danger",
+          "badge": "撤除限速",
+          "tags": ["工程车优先", "安全员值守"],
+          "effects": [
+            { "type": "stage", "action": "speed:remove", "label": "清净减速带" },
+            { "type": "flag", "key": "speed", "value": "remove" },
+            { "type": "metric", "key": "compliance", "delta": -6, "reason": "损坏的校门前设施未予恢复" },
+            { "type": "metric", "key": "risk", "delta": -8, "reason": "学生通行路段失去强制减速" }
+          ],
+          "next": "c_guard"
+        },
+        {
+          "id": "c_speed_signage",
+          "label": "缺口先保留，协管员持旗疏导",
+          "summary": "暂不修复减速带，由专人站在路口指挥学生分批通过，并拦停进出工程车。",
+          "detail": "高峰时段的人车冲突可得到现场指挥，协管员换岗后仍缺少持续限速措施，损坏设施也暂未验收恢复。",
+          "tone": "info",
+          "badge": "人工补位",
+          "tags": ["协管持旗", "分批放行"],
+          "effects": [
+            { "type": "stage", "action": "speed:signage", "label": "持旗疏导" },
+            { "type": "flag", "key": "speed", "value": "signage" },
+            { "type": "metric", "key": "compliance", "delta": -2, "reason": "路面减速设施仍未修复" },
+            { "type": "metric", "key": "risk", "delta": 1, "reason": "现场指挥减少部分人车抢行" }
+          ],
+          "next": "c_guard"
+        }
+      ]
+    },
+    {
+      "id": "c_guard",
+      "type": "decision",
+      "title": "东侧第四面护栏未到货",
+      "kicker": "DECISION 03 / 基坑东侧",
+      "prompt": "监理在巡查表上标出缺口：基坑深 4.2 米，紧邻人行道，现有标准护栏只够围三面，空着的一面正对夜间通道。这一班怎么处理？",
+      "context": "夜班表上只有两名值守人员，人行道无路灯。库房清点结果为一卷警戒带、几只木托盘和一块彩条布；等待标准护栏会再占用半天工期。",
+      "focus": "guardrail",
+      "options": [
+        {
+          "id": "c_guard_standard",
+          "label": "土方先停，标准护栏到齐再复工",
+          "summary": "第四面用标准护栏封闭，监理完成四面临边验收后，再恢复土方作业。",
+          "detail": "工期再延后半天。停工和到货时间写进施工群，交接班按验收单检查固定情况，夜间通道由完整护栏隔开。",
+          "tone": "positive",
+          "badge": "验收后复工",
+          "tags": ["标准护栏", "四面封闭"],
+          "effects": [
+            { "type": "stage", "action": "guard:standard", "label": "待料封闭" },
+            { "type": "flag", "key": "guard", "value": "standard" },
+            { "type": "metric", "key": "structural", "delta": 4, "reason": "基坑周边作业与临边通行受控" },
+            { "type": "metric", "key": "compliance", "delta": 6, "reason": "深基坑四面护栏完成验收" },
+            { "type": "metric", "key": "risk", "delta": 6, "reason": "夜间通道由标准护栏隔开" }
+          ],
+          "next": "c_branch"
+        },
+        {
+          "id": "c_guard_tape",
+          "label": "拉警戒带，夜班加人巡查",
+          "summary": "沿东侧缺口拉设警戒带，夜间另增一名巡查人员，在交接记录中登记巡查时间。",
+          "detail": "警戒带能提示行人绕行，却挡不住人体跌倒或材料碰撞；巡查人员离开缺口时，现场仍无固定防护。",
+          "tone": "caution",
+          "badge": "软质警戒",
+          "tags": ["警戒带", "人工巡查"],
+          "effects": [
+            { "type": "stage", "action": "guard:tape", "label": "警戒带围护" },
+            { "type": "flag", "key": "guard", "value": "tape" },
+            { "type": "metric", "key": "compliance", "delta": -5, "reason": "警戒带未达到临边护栏要求" },
+            { "type": "metric", "key": "risk", "delta": -5, "reason": "缺口防护取决于巡查是否在岗" }
+          ],
+          "next": "c_branch"
+        },
+        {
+          "id": "c_guard_pallet",
+          "label": "堆木托盘，外挂彩条布",
+          "summary": "将库房现有托盘码在缺口处，用彩条布遮住基坑，先让夜间通道看起来有遮挡。",
+          "detail": "托盘和彩条布没有经过临边固定与承载验收，行人可以跨过，材料或车辆碰撞也可能将其推开。",
+          "tone": "danger",
+          "badge": "临时遮挡",
+          "tags": ["木托盘", "彩条布"],
+          "effects": [
+            { "type": "stage", "action": "guard:pallet", "label": "托盘彩条布" },
+            { "type": "flag", "key": "guard", "value": "pallet" },
+            { "type": "metric", "key": "compliance", "delta": -8, "reason": "库房内非标准材料被用作护栏" },
+            { "type": "metric", "key": "risk", "delta": -9, "reason": "遮挡物可被跨越或撞开" }
+          ],
+          "next": "c_branch"
+        },
+        {
+          "id": "c_guard_none",
+          "label": "今晚留空，明早再补护栏",
+          "summary": "土方按原计划完成，东侧暂不设置任何围挡，次日材料到场后再补装。",
+          "detail": "无路灯的人行道将在整个夜班直接通向 4.2 米深基坑，两名值守人员也没有固定设施可依托。",
+          "tone": "danger",
+          "badge": "夜间留空",
+          "tags": ["夜间缺口", "明早补装"],
+          "effects": [
+            { "type": "stage", "action": "guard:none", "label": "缺口敞开" },
+            { "type": "flag", "key": "guard", "value": "none" },
+            { "type": "metric", "key": "compliance", "delta": -12, "reason": "深基坑东侧整夜无临边防护" },
+            { "type": "metric", "key": "risk", "delta": -14, "reason": "无照明通道紧邻敞口深基坑" },
+            { "type": "metric", "key": "accountability", "delta": -8, "reason": "已知缺口仍被留到次日处理" }
+          ],
+          "next": "c_branch"
+        }
+      ]
+    },
+    {
+      "id": "c_branch",
+      "type": "branch",
+      "title": "监测平台判定",
+      "focus": "building",
+      "ambience": "tense",
+      "cases": [
+        {
+          "when": {
+            "kind": "any",
+            "conditions": [
+              { "kind": "metric", "key": "structural", "op": "lt", "value": 55 },
+              { "kind": "metric", "key": "risk", "op": "lt", "value": 48 },
+              {
+                "kind": "all",
+                "conditions": [
+                  { "kind": "flag", "key": "sewage", "op": "in", "value": ["seal", "divert", "monitor"] },
+                  { "kind": "flag", "key": "speed", "value": "remove" },
+                  { "kind": "flag", "key": "guard", "op": "in", "value": ["pallet", "none"] }
+                ]
+              }
+            ]
+          },
+          "next": "c_collapse",
+          "note": "监测平台出现红色报警：3 号楼东侧沉降速率异常，值班工程师记录为结构失稳。"
+        },
+        {
+          "next": "c_stable",
+          "note": "本轮监测曲线保持在线性范围内，未达到结构失稳判定条件，3 号楼继续留点观测。"
+        }
+      ]
+    },
+    {
+      "id": "c_collapse",
+      "type": "consequence",
+      "title": "19:38 东侧结构失稳",
+      "kicker": "CONSEQUENCE / 东侧失稳",
+      "speaker": "应急处置记录",
+      "focus": "collapse",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "collapse", "label": "东侧失稳" },
+        { "type": "metric", "key": "structural", "delta": -18, "reason": "东侧承重构件发生连续破坏" },
+        { "type": "metric", "key": "risk", "delta": -10, "reason": "前期隐患叠加并造成事故" },
+        { "type": "metric", "key": "transparency", "delta": -4, "reason": "受损现场增加成因核查难度" },
+        { "type": "flag", "key": "structuralEvent", "value": "collapse" }
+      ],
+      "text": "19:38，应急记录连续接到 3 号楼东侧异响和下沉报告。外墙随东侧基础下沉发生连续破坏，脚手架变形，扬尘覆盖人行道。夜班保安被气浪推倒，腿部受伤。值守人员随即报告封控现场，施工群里开始核对当晚在场人员，并询问南门次日是否需要继续限制通行。",
+      "next": "c_aftermath"
+    },
+    {
+      "id": "c_stable",
+      "type": "consequence",
+      "title": "黄色提示后的值班交接",
+      "kicker": "CONSEQUENCE / 值班交接",
+      "speaker": "监测与交接记录",
+      "focus": "guardrail",
+      "ambience": "calm",
+      "effects": [
+        { "type": "stage", "action": "stable", "label": "继续观测" },
+        { "type": "metric", "key": "structural", "delta": 3, "reason": "现场处置后监测数据未继续恶化" },
+        { "type": "metric", "key": "risk", "delta": 2, "reason": "本轮异常保持在控制范围内" },
+        { "type": "metric", "key": "accountability", "delta": 2, "reason": "巡查问题已有处置记录" },
+        { "type": "flag", "key": "structuralEvent", "value": "stable" }
+      ],
+      "text": "19:38，监测平台弹出黄色提示：3 号楼东侧沉降速率短时升高，随后回落。值班施工员把曲线截图发进施工群，监理在记录中要求继续留点观测，并逐项核对管网、南门和基坑东侧的处置单。楼体当晚未发生坍塌；交接班仍列出管线接口、东侧沉降和现场防护，要求次日复查并签字。",
+      "next": "c_aftermath"
+    },
+    {
+      "id": "c_aftermath",
+      "type": "narrative",
+      "title": "调查组按时间核对记录",
+      "kicker": "次日 08:10 / 项目部",
+      "speaker": "联合调查询问笔录",
+      "focus": "evidence",
+      "ambience": "tense",
+      "text": "次日 08:10，住建、应急和街道组成的联合调查组进驻项目部。调查员把管线渗漏处置单、南门交通设施变更记录、基坑临边巡查表按时间排开，又调取了施工群消息。他指着签字栏问你：『从 16:20 巡检开始，谁报告了问题，谁作了安排，哪些变更经过你的手？请按顺序说明，材料延误单独列。』",
+      "next": "c_responsibility"
+    },
+    {
+      "id": "c_responsibility",
+      "type": "decision",
+      "title": "向调查组提交哪些材料",
+      "kicker": "DECISION 04 / 调查取证",
+      "prompt": "调查员要求项目部提交记录，并由你说明现场指令和签字经过。你准备怎样答复？",
+      "context": "分包单位确有材料延误，部分施工变更也确有你的签字。调查组会将供货、现场处置和工期安排分别核对，相关经手人都要在笔录中确认。",
+      "options": [
+        {
+          "id": "c_own",
+          "label": "原始记录全部提交，按时间作说明",
+          "summary": "交出签字变更、未采纳的整改建议、施工群沟通和完整监测数据，并确认本人经手事项。",
+          "detail": "材料延误和你发出的指令都列入时间线，调查组可据此区分分包供货、现场管理与工期决策，也能逐项确定后续整改责任人。",
+          "tone": "positive",
+          "badge": "完整提交",
+          "tags": ["原始记录", "配合调查"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "own" }
+          ],
+          "next": "c_closing"
+        },
+        {
+          "id": "c_legal",
+          "label": "按合同清单提供合规文件",
+          "summary": "提交合同要求的验收和合规资料，内部沟通与监测原始数据暂不附入。",
+          "detail": "文件清单可以完成形式核对，整改为何未落实、现场指令如何变化仍缺少依据；你签过的变更也需另行补充说明。",
+          "tone": "caution",
+          "badge": "限定范围",
+          "tags": ["合同文件", "有限提交"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "partial" }
+          ],
+          "next": "c_closing"
+        },
+        {
+          "id": "c_subcontract",
+          "label": "把问题归入分包材料和操作",
+          "summary": "在笔录中强调护栏材料延误和现场违规均属分包事项，请求调查组向分包追责。",
+          "detail": "这些分包情况可以查实，但总包工期安排、你的变更签字和安全负责人的处置职责仍在同一项目记录内，需要分别核对。",
+          "tone": "danger",
+          "badge": "归因分包",
+          "tags": ["分包归因", "回避本人签字"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "blame" }
+          ],
+          "next": "c_closing"
+        },
+        {
+          "id": "c_resign",
+          "label": "递交辞职，退出后续说明",
+          "summary": "以辞去安全负责人职务表示承担管理后果，此后不再接受公开询问或补充材料。",
+          "detail": "岗位变动会写入个人处理记录，调查组仍缺少你对指令、签字和整改经过的说明，相关事实只能由他人补证。",
+          "tone": "caution",
+          "badge": "停止说明",
+          "tags": ["辞职", "退出调查"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "resign" }
+          ],
+          "next": "c_closing"
+        }
+      ]
+    },
+    {
+      "id": "c_closing",
+      "type": "narrative",
+      "title": "核查表上的整改期限",
+      "kicker": "EPILOGUE / 调查记录",
+      "speaker": "调查组会议纪要",
+      "focus": "overview",
+      "ambience": "calm",
+      "text": "调查组将管线、结构和现场管理分别列入核查表，再按签字时间还原处置经过。工期要求、分包材料延误和现场指令进入同一份时间线；漏记的交接、未附数据的整改单，都要找到经手人补证。会议纪要最后要求：检测附件、验收签字和监测交接归入同一卷档案，尚未完成的整改注明复查人与期限。",
+      "next": "c_end"
+    },
+    {
+      "id": "c_end",
+      "type": "end",
+      "title": "现场记录已归档",
+      "summary": "管网开挖面、南门路面和基坑缺口各自的处置，加上你向调查组交的陈述，一并写入推演记录，评分按这些条目汇总。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "c_rule_sewage_report",
+      "label": "检测完成后再安排回填",
+      "description": "巡检发现接口错位和基础附近渗漏后，第三段先停工封闭。抽排与第三方检测留存了管壁、含水率及空洞情况，为复工提供了现场依据。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "sewage", "value": "report" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": 4, "reason": "基础附近积水得到及时抽排" },
+          { "key": "compliance", "delta": 4, "reason": "停工上报和检测手续完整" },
+          { "key": "risk", "delta": 3, "reason": "管壁与土体状况已有检测依据" },
+          { "key": "transparency", "delta": 3, "reason": "检测数据随处置单归档" }
+        ],
+        "tags": ["先检测后复工"]
+      }
+    },
+    {
+      "id": "c_rule_sewage_seal",
+      "label": "接口封住，土体情况未查",
+      "description": "快干水泥处理了可见的错位接口，已经进入回填土的污水未被抽排，可能的空洞也未列入检测，回填继续按原进度进行。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "sewage", "value": "seal" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": -4, "reason": "基础附近既有病害仍然保留" },
+          { "key": "risk", "delta": -4, "reason": "外观修复掩盖了土体隐患" }
+        ],
+        "tags": ["未检测即回填"]
+      }
+    },
+    {
+      "id": "c_rule_sewage_divert",
+      "label": "暗管接入市政雨水口",
+      "description": "污水经暗管绕开处理设施排入雨水系统，作业面被清理成正常状态。违法排放缺少审批记录，基础附近的渗流也没有查明。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "sewage", "value": "divert" },
+      "effects": {
+        "metrics": [
+          { "key": "compliance", "delta": -10, "reason": "未经许可向雨水系统排污" },
+          { "key": "transparency", "delta": -6, "reason": "排放与渗漏痕迹被清理" },
+          { "key": "risk", "delta": -5, "reason": "实际病害未进入处置记录" },
+          { "key": "accountability", "delta": -4, "reason": "以暗管排放避开停工" }
+        ],
+        "tags": ["违规引流"]
+      }
+    },
+    {
+      "id": "c_rule_sewage_monitor",
+      "label": "监测点旁继续施工",
+      "description": "沉降和含水率数据得到加密采集，施工面却未因已知接口破损而停工。值班人员能看到变化，渗漏仍在继续影响基础附近土体。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "sewage", "value": "monitor" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": -3, "reason": "污水继续渗向基础周边" },
+          { "key": "risk", "delta": -3, "reason": "监测期间破损接口仍未隔离" }
+        ],
+        "tags": ["监测期间带险施工"]
+      }
+    },
+    {
+      "id": "c_rule_speed_standard",
+      "label": "校门前重装标准减速带",
+      "description": "南门按变更记录封半幅施工，10cm 橡胶减速带和反光警示完成恢复。后续工程车经过接送路段时仍须减速。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "speed", "value": "standard" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": 5, "reason": "路面强制减速设施恢复" },
+          { "key": "compliance", "delta": 3, "reason": "设施高度与反光警示符合要求" }
+        ],
+        "tags": ["校园周边限速"]
+      }
+    },
+    {
+      "id": "c_rule_speed_temp",
+      "label": "碎石木板用于重车通道",
+      "description": "临时凸起赶在放学高峰前铺好，能够提醒部分车辆减速。其高度和固定状况未经标准验收，重车反复碾压后仍需复查。",
+      "kind": "neutral",
+      "when": { "kind": "flag", "key": "speed", "value": "temp" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": -3, "reason": "临时凸起可能松散或移位" },
+          { "key": "compliance", "delta": -2, "reason": "铺垫设施未按正式标准验收" }
+        ],
+        "tags": ["应急铺垫待复查"]
+      }
+    },
+    {
+      "id": "c_rule_speed_remove",
+      "label": "为工程车清空南门路面",
+      "description": "损坏的减速带被全部移走，放学时仅靠增派安全员疏导。通行安排偏向施工车辆，学生经过的路面已无限速设施。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "speed", "value": "remove" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": -8, "reason": "校门前车辆不再被强制减速" },
+          { "key": "compliance", "delta": -5, "reason": "交通安全设施拆除后未恢复" },
+          { "key": "accountability", "delta": -3, "reason": "已知放学冲突仍让位于通行进度" }
+        ],
+        "tags": ["校园门前撤除限速"]
+      }
+    },
+    {
+      "id": "c_rule_speed_signage",
+      "label": "协管员在缺口旁持旗疏导",
+      "description": "专人指挥学生分批通过并拦停工程车，高峰秩序有所改善。减速带缺口仍然保留，换岗后的车速控制缺少固定设施。",
+      "kind": "neutral",
+      "when": { "kind": "flag", "key": "speed", "value": "signage" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": 1, "reason": "持旗指挥减少部分抢行" },
+          { "key": "compliance", "delta": -2, "reason": "标准减速带仍未恢复" }
+        ],
+        "tags": ["协管持旗疏导"]
+      }
+    },
+    {
+      "id": "c_rule_guard_standard",
+      "label": "第四面护栏验收后复工",
+      "description": "标准护栏到场后补齐东侧缺口，四面固定情况经监理检查。夜间通道与 4.2 米深基坑隔开，巡查表也有验收记录可查。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "guard", "value": "standard" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": 4, "reason": "基坑临边作业受到完整围护" },
+          { "key": "compliance", "delta": 5, "reason": "深基坑四面防护符合要求" },
+          { "key": "risk", "delta": 4, "reason": "夜间通道与基坑有效隔开" }
+        ],
+        "tags": ["四面护栏验收"]
+      }
+    },
+    {
+      "id": "c_rule_guard_tape",
+      "label": "警戒带用于临边围护",
+      "description": "东侧缺口拉设了警戒带并增加巡查，但软质材料无法承受人体、材料或车辆冲击，固定护栏仍未补齐。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "guard", "value": "tape" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": -5, "reason": "缺口防护依赖巡查人员在岗" },
+          { "key": "compliance", "delta": -4, "reason": "警戒带不符合固定护栏标准" }
+        ],
+        "tags": ["软质警戒"]
+      }
+    },
+    {
+      "id": "c_rule_guard_pallet",
+      "label": "托盘彩条布遮住基坑",
+      "description": "木托盘与彩条布让缺口有了外观遮挡，材料却未按临边护栏固定和验收，行人仍可跨越，碰撞后也可能移位。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "guard", "value": "pallet" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": -6, "reason": "行人仍可越过临时遮挡" },
+          { "key": "compliance", "delta": -7, "reason": "托盘彩条布替代了标准护栏" }
+        ],
+        "tags": ["非标准遮挡"]
+      }
+    },
+    {
+      "id": "c_rule_guard_none",
+      "label": "东侧缺口留到明早",
+      "description": "土方作业继续进行，东侧夜间通道没有任何临边围挡。无路灯的人行道直接邻近深基坑，次日补装无法覆盖当班时段。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "guard", "value": "none" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": -10, "reason": "夜间通道旁基坑整夜敞口" },
+          { "key": "compliance", "delta": -8, "reason": "临边防护要求被直接搁置" },
+          { "key": "accountability", "delta": -6, "reason": "巡查确认的缺口仍被留空" }
+        ],
+        "tags": ["夜间临边空缺"]
+      }
+    },
+    {
+      "id": "c_rule_inspect_pipe",
+      "label": "接口与回填土已到场核对",
+      "description": "你在第三段开挖面查看了污水管错位位置，并检查邻近回填土。巡检记录据此写明渗漏路径，后续处置有了具体位置。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "c_pipe" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": 2, "reason": "接口和渗漏位置已现场确认" },
+          { "key": "transparency", "delta": 2, "reason": "管线勘查情况写入巡检表" }
+        ],
+        "tags": ["接口现场核查"]
+      }
+    },
+    {
+      "id": "c_rule_inspect_crossing",
+      "label": "放学人流列入南门巡查",
+      "description": "你在南门外核对了接送人流和工程车进出路线，记录中注明道路共用及放学时间，处理减速带时可据此安排放行。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "c_crossing" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": 2, "reason": "人车交会情况进入处置依据" },
+          { "key": "compliance", "delta": 1, "reason": "校园周边通行要求已核对" }
+        ],
+        "tags": ["南门通行核查"]
+      }
+    },
+    {
+      "id": "c_rule_inspect_edge",
+      "label": "东侧通道缺口已定位",
+      "description": "你沿基坑东侧走完夜间通道，在巡查表上标出护栏缺口及其与人行道的关系，并注明该处没有路灯。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "c_edge" },
+      "effects": {
+        "metrics": [
+          { "key": "risk", "delta": 2, "reason": "缺口位置与夜间路线已明确" },
+          { "key": "accountability", "delta": 1, "reason": "临边问题进入签认记录" }
+        ],
+        "tags": ["东侧临边核查"]
+      }
+    },
+    {
+      "id": "c_rule_inspect_crack",
+      "label": "东侧斜裂缝补入勘查",
+      "description": "你查看并记录了 3 号楼东侧既有斜向裂缝，将这项历史缺陷附在本次结构核查材料中，供监测和调查对照。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "c_crack" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": 3, "reason": "既有裂缝纳入本次结构核查" },
+          { "key": "transparency", "delta": 2, "reason": "历史缺陷已有书面记录" }
+        ],
+        "tags": ["既有裂缝记录"]
+      }
+    },
+    {
+      "id": "c_rule_responsibility_own",
+      "label": "原始记录按时间提交",
+      "description": "签字变更、整改建议、施工群消息和监测数据全部交给调查组。你确认了本人经手事项，分包材料延误与总包管理决定可在同一时间线内核对。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "responsibility", "value": "own" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": 9, "reason": "本人签字和指令均如实说明" },
+          { "key": "transparency", "delta": 6, "reason": "原始项目记录完整接受核查" }
+        ],
+        "tags": ["完整调查材料"]
+      }
+    },
+    {
+      "id": "c_rule_responsibility_partial",
+      "label": "内部沟通和监测附件未交",
+      "description": "合同清单内的合规文件已经提交，施工群沟通、未采纳建议和监测原始数据仍留在项目部，调查时间线因此缺少若干处置依据。",
+      "kind": "neutral",
+      "when": { "kind": "flag", "key": "responsibility", "value": "partial" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -4, "reason": "关键现场沟通未纳入笔录" },
+          { "key": "transparency", "delta": -3, "reason": "提交范围排除了部分原始材料" }
+        ],
+        "tags": ["合同范围内提交"]
+      }
+    },
+    {
+      "id": "c_rule_responsibility_blame",
+      "label": "笔录只强调分包问题",
+      "description": "材料延误和违规操作被归入分包事项，你的变更签字、总包工期安排及验收职责未同时说明，调查人员需要另行向其他经手人补证。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "responsibility", "value": "blame" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -10, "reason": "本人与总包管理事项被略去" },
+          { "key": "compliance", "delta": -3, "reason": "总包验收职责未作说明" },
+          { "key": "transparency", "delta": -5, "reason": "笔录未完整呈现经手过程" }
+        ],
+        "tags": ["单方面归因分包"]
+      }
+    },
+    {
+      "id": "c_rule_responsibility_resign",
+      "label": "辞职后停止补充说明",
+      "description": "辞职记录了岗位处理结果，你对现场指令、签字变更和整改经过的说明随之中止，调查组仍需用他人笔录和原始文件补齐事实。",
+      "kind": "neutral",
+      "when": { "kind": "flag", "key": "responsibility", "value": "resign" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -5, "reason": "本人退出后续调查说明" },
+          { "key": "transparency", "delta": -2, "reason": "部分决策经过未向调查公开" }
+        ],
+        "tags": ["辞职并停止说明"]
+      }
+    },
+    {
+      "id": "c_rule_collapse",
+      "label": "多处隐患叠加后结构失稳",
+      "description": "前期渗漏、现场通行和临边防护的处置结果共同进入监测判定，东侧沉降继续发展并造成承重结构破坏，事故调查随之展开。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "structuralEvent", "value": "collapse" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": -8, "reason": "失稳已造成承重结构破坏" },
+          { "key": "accountability", "delta": -4, "reason": "事故进入联合调查程序" },
+          { "key": "transparency", "delta": -3, "reason": "受损现场增加成因核对工作" }
+        ],
+        "tags": ["东侧结构失稳"]
+      }
+    },
+    {
+      "id": "c_rule_stable",
+      "label": "本轮监测未越过失稳判定",
+      "description": "黄色提示后的沉降速率回落，本轮数据保持在控制范围内。值班交接继续保留复测和现场核查，现有记录可供次日复查。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "structuralEvent", "value": "stable" },
+      "effects": {
+        "metrics": [
+          { "key": "structural", "delta": 3, "reason": "本轮异常未发展为结构事故" },
+          { "key": "risk", "delta": 2, "reason": "复测与交接继续维持现场控制" }
+        ],
+        "tags": ["监测后继续复查"]
+      }
+    },
+    {
+      "id": "c_rule_systemic_prevention",
+      "label": "三处作业均完成规定处置",
+      "description": "第三段管网经停工抽排检测后再定复工，南门标准减速带恢复，基坑四面护栏完成封闭。三份处置与验收记录可以相互核对。",
+      "kind": "positive",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "sewage", "value": "report" },
+          { "kind": "flag", "key": "speed", "value": "standard" },
+          { "kind": "flag", "key": "guard", "value": "standard" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "compliance", "delta": 3, "reason": "三处隐患均按规定完成处置" },
+          { "key": "risk", "delta": 3, "reason": "检测、限速与围护均有复查依据" },
+          { "key": "accountability", "delta": 2, "reason": "处置与验收责任已写入记录" }
+        ],
+        "tags": ["三处整改留痕"]
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "c_out_governance",
+      "kicker": "调查记录 / 处置闭环",
+      "title": "三处整改均有复查记录",
+      "description": "隐患由第三段开挖、南门巡查和东侧临边检查分别发现。当晚第三段停工抽排并检测，南门重装 10cm 减速带，第四面标准护栏验收后复工，监测数据保持在控制范围。既有裂缝和沉降曲线仍需复核，一次数据回落不能代替持续观测。管线处置单、交通设施变更和护栏验收已能对应到经手人，调查时还应补齐相关沟通附件。",
+      "advice": "复工前由施工员和监理共同签收管线检测与临边验收。将沉降、含水率复测要求写入值守交接，达到停工阈值时先停止作业再上报，施工群指令、照片和监测导出文件当天归档。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "sewage", "value": "report" },
+          { "kind": "flag", "key": "speed", "value": "standard" },
+          { "kind": "flag", "key": "guard", "value": "standard" },
+          { "kind": "flag", "key": "responsibility", "op": "in", "value": ["own", "partial"] }
+        ]
+      }
+    },
+    {
+      "id": "c_out_collapse_accountable",
+      "kicker": "事故卷宗 / 时间线完整",
+      "title": "事故卷宗保留了完整时间线",
+      "description": "渗漏、减速带损坏和护栏缺口此前已进入现场记录。当晚的处置没能控制住东侧沉降，19:38 发生结构失稳，夜班保安腿部受伤。既有渗漏与现场防护问题叠加，前期遗漏及赶工安排需要逐项查清。你提交了签字变更、整改建议、施工群沟通和监测原始数据，分包材料延误与本人指令均有证据可查。",
+      "advice": "维持事故现场封控，未经调查和技术复核不得回填或拆改。封存监测原始文件与群消息，按时间补做经手人笔录；对仍存在的渗漏点和临边缺口单独挂牌，整改完成并由监理复验后再讨论复工。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "structuralEvent", "value": "collapse" },
+          { "kind": "flag", "key": "responsibility", "value": "own" }
+        ]
+      }
+    },
+    {
+      "id": "c_out_collapse_evasive",
+      "kicker": "事故卷宗 / 记录缺页",
+      "title": "调查时间线仍有缺页",
+      "description": "开挖面、南门和基坑东侧的问题当时都写进了现场记录，当晚的处置没能拦住 3 号楼东侧失稳，夜班保安受伤。渗漏和防护缺口叠在一起只是成因的一半；另一半要看哪些指令发下去没被纠正，而这一段恰恰缺材料。你交上来的东西可能是合同清单里的那一部分，可能把话头交给分包，也可能已经交了辞职信。无论如何，你签过的变更和总包那一侧的安排，还得由别人替你补证。",
+      "advice": "立即封存原始施工群消息、监测导出文件和签字变更，按时间列出报告人、指令人与验收人。对尚存渗漏和临边缺口的部位先停工隔离，由总包、分包分别签认事实；不得用合同提交范围或辞职手续代替补充笔录。",
+      "when": { "kind": "flag", "key": "structuralEvent", "value": "collapse" }
+    },
+    {
+      "id": "c_out_stable_evasive",
+      "kicker": "调查记录 / 未遂事件",
+      "title": "数据回落，说明仍未补齐",
+      "description": "沉降速率短时升高之后自己回落，19:38 楼体没有失稳。这不代表现场干净了：没修的接口、临时铺垫的减速带、还没验收的临边一侧，都还挂在交接事项里。调查组要问的也正是这些，谁报的、谁批的、哪张整改单没有附数据。你这次把话头交给分包，或者交了辞职信不再说明，签字、工期指令和整改经过之间就断了一截，只能靠别人的笔录接上。",
+      "advice": "把今晚那条黄色提示按未遂事件登记，次日由安全负责人和监理复查管线接口、南门设施及东侧护栏，未合格的项目先停用或停工。补齐群消息、监测曲线和本人笔录，每项遗留问题注明整改人、复验人与完成期限。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "structuralEvent", "value": "stable" },
+          { "kind": "flag", "key": "responsibility", "op": "in", "value": ["blame", "resign"] }
+        ]
+      }
+    },
+    {
+      "id": "c_out_open",
+      "kicker": "调查记录 / 待核对",
+      "title": "处置记录需要继续核对",
+      "description": "三处隐患分别在开挖面、南门和东侧巡查中被发现，你做了不同程度的处置，监测没有走到结构失稳那一步。隐患并没有因此消失：临时铺垫的减速带、仍未修的接口、不足一面标准护栏的开口，都可能和别的现场情况叠在一起，得在次日交接时逐项核实，不能靠这一轮曲线回落销项。调查材料也要接着补，处置动作、签字和监测附件按时间对上，分包供货与总包管理分开留证。",
+      "advice": "对照三份现场记录做一次联合复查：管线未检测就停止回填，减速带未达标就限制工程车通行，护栏未验收就封闭临边通道。将整改前后照片、监测数据和复验签字附在同一事项下，交接时逐项确认。",
+      "fallback": true
+    }
+  ]
+}

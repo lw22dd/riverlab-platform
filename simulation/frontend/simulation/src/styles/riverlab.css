@@ -1,0 +1,381 @@
+/* ==========================================================================
+   RIVERLAB · 江堰 — 亮色研平台统一设计令牌
+   --------------------------------------------------------------------------
+   本文件是两个前端（simulation / panorama + admin）唯一的设计令牌源。
+   两份副本保持 byte-identical；请勿在组件内再写品牌色十六进制值。
+
+   方向：纸白底 + 岷江深青主色 + 都江堰堰体土黄点缀色。
+   目标：高对比、投影可读、克制动效、细描边 + 柔和投影。
+   ========================================================================== */
+
+:root {
+  /* ---- 纸面与墨色 ------------------------------------------------------ */
+  --rl-bg: #f4f7f9;
+  --rl-bg-alt: #edf2f5;
+  --rl-surface: #ffffff;
+  --rl-surface-2: #fbfcfd;
+  --rl-border: #e2e9ee;
+  --rl-border-strong: #cfdae2;
+  --rl-ink: #14242e;
+  --rl-body: #3d5462;
+  --rl-muted: #6e8593;
+  --rl-faint: #9bb0bc;
+
+  /* ---- 品牌 ------------------------------------------------------------ */
+  --rl-primary: #0f6e84;
+  --rl-primary-hover: #0c5b6d;
+  --rl-primary-soft: #e4f1f4;
+  --rl-primary-rgb: 15, 110, 132;
+  --rl-accent: #c4703a;
+  --rl-accent-hover: #b0622f;
+  --rl-accent-soft: #fbeee3;
+  --rl-accent-rgb: 196, 112, 58;
+  --rl-celadon: #4e9a8e;
+
+  /* ---- 语义 ------------------------------------------------------------ */
+  --rl-info: #3e7fb8;
+  --rl-info-soft: #e9f1f8;
+  --rl-success: #2f9e68;
+  --rl-success-soft: #e6f5ee;
+  --rl-warning: #a9761a;
+  --rl-warning-bright: #d99a2b;
+  --rl-warning-soft: #fbf1dc;
+  --rl-danger: #c34c3c;
+  --rl-danger-bright: #d65b4a;
+  --rl-danger-soft: #fbeae7;
+
+  /* ---- 形状与投影 ------------------------------------------------------ */
+  --rl-r-sm: 8px;
+  --rl-r-md: 12px;
+  --rl-r-lg: 16px;
+  --rl-sh-sm: 0 1px 2px rgba(20, 36, 46, 0.05);
+  --rl-sh-md: 0 6px 20px rgba(20, 36, 46, 0.07);
+  --rl-sh-lg: 0 18px 48px rgba(20, 36, 46, 0.09);
+
+  /* ---- 字体 ------------------------------------------------------------ */
+  --rl-font:
+    'Inter', 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei',
+    system-ui, sans-serif;
+  --rl-display:
+    'Bahnschrift', 'Inter', 'SF Pro Display', 'PingFang SC', 'Noto Sans SC',
+    'Microsoft YaHei', sans-serif;
+  --rl-mono:
+    'JetBrains Mono', 'SFMono-Regular', 'Cascadia Code', 'Roboto Mono', Consolas,
+    monospace;
+
+  /* ======================================================================
+     simulation 别名（旧令牌名保持不变，值收敛到 RIVERLAB）
+     ====================================================================== */
+  --bg: var(--rl-bg);
+  --bg-soft: var(--rl-bg-alt);
+  --bg-elevated: var(--rl-surface);
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-solid: var(--rl-surface);
+  --panel-raised: var(--rl-surface);
+
+  --text-strong: var(--rl-ink);
+  --text: var(--rl-body);
+  --text-muted: var(--rl-muted);
+  --text-faint: var(--rl-faint);
+
+  --line: var(--rl-border);
+  --line-strong: var(--rl-border-strong);
+  --line-bright: #b4c4ce;
+
+  --brand: var(--rl-primary);
+  --brand-rgb: var(--rl-primary-rgb);
+  --blue: var(--rl-info);
+  --warn: var(--rl-warning);
+  --danger: var(--rl-danger);
+  --success: var(--rl-success);
+
+  --shadow-sm: var(--rl-sh-sm);
+  --shadow-md: var(--rl-sh-md);
+  --shadow-lg: var(--rl-sh-lg);
+
+  --header-h: 76px;
+  --container: 1280px;
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+
+  --font-sans: var(--rl-font);
+  --font-display: var(--rl-display);
+  --font-mono: var(--rl-mono);
+
+  /* portal 表面令牌（供 portal.css / 仿真公共站使用） */
+  --p-bg: var(--rl-bg);
+  --p-bg-deep: var(--rl-bg-alt);
+  --p-bg-soft: var(--rl-surface);
+  --p-surface: var(--rl-surface);
+  --p-surface-solid: var(--rl-surface);
+  --p-surface-raised: var(--rl-surface);
+  --p-line: var(--rl-border);
+  --p-line-strong: var(--rl-border-strong);
+  --p-line-bright: #b4c4ce;
+  --p-text: var(--rl-body);
+  --p-text-strong: var(--rl-ink);
+  --p-muted: var(--rl-muted);
+  --p-faint: var(--rl-faint);
+  --p-cyan: var(--rl-primary);
+  --p-cyan-rgb: var(--rl-primary-rgb);
+  --p-blue: var(--rl-info);
+  --p-blue-rgb: 62, 127, 184;
+  --p-amber: var(--rl-warning);
+  --p-green: var(--rl-success);
+  --p-glow: rgba(15, 110, 132, 0.08);
+  --p-shadow: var(--rl-sh-lg);
+  --p-radius-xl: 18px;
+  --p-radius-lg: 14px;
+  --p-radius-md: 10px;
+  --p-header-h: 78px;
+  --p-container: 1280px;
+
+  /* ======================================================================
+     panorama / admin 别名
+     ====================================================================== */
+  --color-primary: var(--rl-primary);
+  --color-primary-hover: var(--rl-primary-hover);
+  --color-primary-light: var(--rl-primary-soft);
+  --color-success: var(--rl-success);
+  --color-warning: var(--rl-warning-bright);
+  --color-danger: var(--rl-danger-bright);
+
+  --node-default: #5f95ff;
+  --node-has-pano: var(--rl-celadon);
+  --node-no-pano: #a0b4c8;
+  --node-selected: var(--rl-primary);
+
+  --edge-default: #8fb6c0;
+  --edge-selected: var(--rl-primary);
+
+  --toolbar-height: 56px;
+  --sidebar-width: 320px;
+  --panel-padding: 16px;
+
+  --bg-canvas: var(--rl-bg);
+  --bg-toolbar: var(--rl-surface);
+  --bg-sidebar: var(--rl-surface);
+  --bg-panel: var(--rl-surface-2);
+  --bg-hover: var(--rl-bg-alt);
+  --bg-active: var(--rl-primary-soft);
+
+  --border-color: var(--rl-border);
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+
+  --font-family: var(--rl-font);
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+
+  /* ======================================================================
+     TDesign 主题桥：所有 t-* 组件随品牌色换肤
+     ====================================================================== */
+  --td-brand-color: var(--rl-primary);
+  --td-brand-color-1: #eaf4f6;
+  --td-brand-color-2: #d5e9ed;
+  --td-brand-color-3: #b9dce2;
+  --td-brand-color-4: #93c9d3;
+  --td-brand-color-5: #69b3c1;
+  --td-brand-color-6: #449aa9;
+  --td-brand-color-7: #0f6e84;
+  --td-brand-color-8: #0c5b6d;
+  --td-brand-color-9: #0a4a59;
+  --td-brand-color-10: #073a46;
+  --td-brand-color-hover: var(--rl-primary-hover);
+  --td-brand-color-active: var(--rl-primary-hover);
+  --td-brand-color-focus: rgba(15, 110, 132, 0.16);
+  --td-brand-color-light: var(--rl-primary-soft);
+  --td-brand-color-light-hover: #d5e9ed;
+  --td-brand-color-disabled: rgba(15, 110, 132, 0.34);
+  --td-text-color-brand: var(--rl-primary);
+  --td-text-color-link: var(--rl-primary);
+
+  --td-bg-color-page: var(--rl-bg);
+  --td-bg-color-container: var(--rl-surface);
+  --td-bg-color-container-hover: var(--rl-bg-alt);
+  --td-bg-color-secondarycontainer: var(--rl-bg-alt);
+
+  --td-text-color-primary: var(--rl-ink);
+  --td-text-color-secondary: var(--rl-body);
+  --td-text-color-placeholder: var(--rl-faint);
+
+  --td-border-level-1-color: var(--rl-border);
+  --td-border-level-2-color: var(--rl-border-strong);
+  --td-component-stroke: var(--rl-border);
+  --td-radius-default: 10px;
+
+  --td-success-color: var(--rl-success);
+  --td-warning-color: var(--rl-warning-bright);
+  --td-error-color: var(--rl-danger-bright);
+
+  color-scheme: light;
+}
+
+/* TDesign 在 html[theme-mode='light'] 上取变量，显式补一层同样映射。 */
+:root[theme-mode='light'] {
+  --td-brand-color: var(--rl-primary);
+  --td-brand-color-1: #eaf4f6;
+  --td-brand-color-2: #d5e9ed;
+  --td-brand-color-3: #b9dce2;
+  --td-brand-color-4: #93c9d3;
+  --td-brand-color-5: #69b3c1;
+  --td-brand-color-6: #449aa9;
+  --td-brand-color-7: #0f6e84;
+  --td-brand-color-8: #0c5b6d;
+  --td-brand-color-9: #0a4a59;
+  --td-brand-color-10: #073a46;
+  --td-brand-color-hover: var(--rl-primary-hover);
+  --td-brand-color-active: var(--rl-primary-hover);
+  --td-brand-color-focus: rgba(15, 110, 132, 0.16);
+  --td-brand-color-light: var(--rl-primary-soft);
+  --td-brand-color-light-hover: #d5e9ed;
+  --td-brand-color-disabled: rgba(15, 110, 132, 0.34);
+  --td-text-color-brand: var(--rl-primary);
+  --td-text-color-link: var(--rl-primary);
+
+  --td-bg-color-page: var(--rl-bg);
+  --td-bg-color-container: var(--rl-surface);
+  --td-bg-color-container-hover: var(--rl-bg-alt);
+  --td-bg-color-secondarycontainer: var(--rl-bg-alt);
+
+  --td-text-color-primary: var(--rl-ink);
+  --td-text-color-secondary: var(--rl-body);
+  --td-text-color-placeholder: var(--rl-faint);
+
+  --td-border-level-1-color: var(--rl-border);
+  --td-border-level-2-color: var(--rl-border-strong);
+  --td-component-stroke: var(--rl-border);
+  --td-radius-default: 10px;
+}
+
+/* 统一选中态与焦点环 */
+::selection {
+  color: #ffffff;
+  background: rgba(15, 110, 132, 0.86);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(15, 110, 132, 0.5);
+  outline-offset: 2px;
+}
+
+/* TDesign 细节统一：圆角、描边、投影 */
+.t-button {
+  font-family: var(--rl-font);
+  border-radius: 9px;
+  font-weight: 500;
+}
+
+.t-tag {
+  border-radius: 999px;
+  font-family: var(--rl-mono);
+  letter-spacing: 0.03em;
+}
+
+.t-card {
+  border-radius: var(--rl-r-md);
+}
+
+.t-dialog,
+.t-drawer {
+  --td-dialog-body-padding: 20px 22px;
+}
+
+/* 数据标签使用等宽字体，保证答辩投影可读 */
+.rl-mono {
+  font-family: var(--rl-mono);
+  letter-spacing: 0.06em;
+}
+
+.rl-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--rl-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rl-primary);
+}
+
+.rl-eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* 组件库 CSS 的打包顺序可能晚于本文件，用 !important 固定整条品牌色阶。 */
+:root,
+:root[theme-mode='light'] {
+  --td-brand-color: var(--rl-primary) !important;
+  --td-brand-color-1: #eaf4f6 !important;
+  --td-brand-color-2: #d5e9ed !important;
+  --td-brand-color-3: #b9dce2 !important;
+  --td-brand-color-4: #93c9d3 !important;
+  --td-brand-color-5: #69b3c1 !important;
+  --td-brand-color-6: #449aa9 !important;
+  --td-brand-color-7: #0f6e84 !important;
+  --td-brand-color-8: #0c5b6d !important;
+  --td-brand-color-9: #0a4a59 !important;
+  --td-brand-color-10: #073a46 !important;
+  --td-brand-color-hover: var(--rl-primary-hover) !important;
+  --td-brand-color-active: var(--rl-primary-hover) !important;
+  --td-brand-color-focus: rgba(15, 110, 132, 0.16) !important;
+  --td-brand-color-light: var(--rl-primary-soft) !important;
+  --td-brand-color-light-hover: #d5e9ed !important;
+  --td-brand-color-disabled: rgba(15, 110, 132, 0.34) !important;
+  --td-text-color-brand: var(--rl-primary) !important;
+  --td-text-color-link: var(--rl-primary) !important;
+  --td-bg-color-page: var(--rl-bg) !important;
+  --td-bg-color-container: var(--rl-surface) !important;
+  --td-bg-color-container-hover: var(--rl-bg-alt) !important;
+  --td-bg-color-secondarycontainer: var(--rl-bg-alt) !important;
+  --td-text-color-primary: var(--rl-ink) !important;
+  --td-text-color-secondary: var(--rl-body) !important;
+  --td-text-color-placeholder: var(--rl-faint) !important;
+  --td-border-level-1-color: var(--rl-border) !important;
+  --td-border-level-2-color: var(--rl-border-strong) !important;
+  --td-component-stroke: var(--rl-border) !important;
+  --td-radius-default: 10px !important;
+  --td-success-color: var(--rl-success) !important;
+  --td-warning-color: var(--rl-warning-bright) !important;
+  --td-error-color: var(--rl-danger-bright) !important;
+}
+
+/* 响应式高度令牌：本文件最后加载，需同时覆盖各 app 的媒体查询。 */
+@media (max-width: 900px) {
+  :root {
+    --p-header-h: 70px;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --header-h: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --p-header-h: 64px;
+  }
+}

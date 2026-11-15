@@ -1,0 +1,516 @@
+{
+  "id": "trolley-problem",
+  "title": "电车悖论",
+  "subtitle": "五个人与一个人",
+  "tagline": "制动失效后，75 秒内只有一次扳动道岔的机会。",
+  "description": "你是矿区夜班道岔值守员。主线有五名检修工人，侧线有一名巡检员，一辆制动失效的货运电车正在接近。你可以保持主线，也可以扳动道岔。事后，调查组会核对现场记录，并请你说明当时看到的情况和作出的判断。",
+  "domain": "trolley",
+  "version": "1.0.0",
+  "difficulty": "进阶",
+  "estimatedMinutes": 7,
+  "tags": ["电车难题", "道岔", "责任伦理", "程序正义"],
+  "brief": {
+    "role": "废弃矿区夜班道岔值守员",
+    "premise": "18:42，矿区货运电车的制动压力归零。它正滑向主线上的五名检修工人；旁边侧线上，一名巡检员独自作业。",
+    "objective": "在电车抵达分歧点前决定是否扳道，随后向事故调查组提交操作经过。",
+    "constraints": [
+      "道岔手柄只能操作一次",
+      "距电车到达分歧点约 75 秒",
+      "主线有 5 名工人，侧线有 1 名巡检员",
+      "现有时间不足以组织两侧人员全部撤离"
+    ],
+    "ethicsLens": "需要同时考虑伤亡人数、主动介入造成的伤害，以及值守员能否替现场人员决定风险。",
+    "safetyNotice": "画面中的人员均为剪影，碰撞过程不作写实呈现。"
+  },
+  "metrics": [
+    {
+      "key": "lives",
+      "label": "生命权重",
+      "shortLabel": "生命",
+      "description": "记录两条轨道上的伤亡人数及获救人数。",
+      "initial": 68,
+      "weight": 0.3,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "intent",
+      "label": "意图伦理",
+      "shortLabel": "意图",
+      "description": "记录你是否主动改变伤害路径，以及操作时能否预见后果。",
+      "initial": 62,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "justice",
+      "label": "程序正义",
+      "shortLabel": "程序",
+      "description": "记录作业限制、受影响者参与和决定过程的公开程度。",
+      "initial": 64,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "accountability",
+      "label": "责任承担",
+      "shortLabel": "担责",
+      "description": "记录事后陈述是否完整，操作理由与不确定信息是否如实提交。",
+      "initial": 60,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "trust",
+      "label": "社会信任",
+      "shortLabel": "信任",
+      "description": "记录同事和公众能否依据完整材料理解并检验这次决定。",
+      "initial": 66,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    }
+  ],
+  "startNodeId": "t_intro",
+  "nodes": [
+    {
+      "id": "t_intro",
+      "type": "narrative",
+      "title": "制动压力归零",
+      "kicker": "PROLOGUE / 18:42",
+      "speaker": "矿区广播",
+      "focus": "overview",
+      "ambience": "tense",
+      "text": "18:42，控制台右上角的制动压力表跳到 0，警报随即响起。矿区广播开始重复：『主线检修组，马上离轨！重复，马上离轨！』货运电车正从坡道滑下，车轮擦过旧钢轨，速度没有降下来。你站在道岔手柄旁，耳机里夹着检修组的呼叫；主线远处，五顶黄色安全帽仍在检测车旁移动。",
+      "next": "t_scene"
+    },
+    {
+      "id": "t_scene",
+      "type": "narrative",
+      "title": "分歧点前的控制台",
+      "kicker": "00:00:47 / 分歧点",
+      "speaker": "现场观察",
+      "focus": "lever",
+      "ambience": "tense",
+      "text": "主线上的五个人正合力推检测车，轮轴声盖过广播，谁也没有抬头。侧线那名巡检员蹲在轨旁，在记录板上写着什么，背对来车。控制台铭牌标着手柄行程，完成换轨不到一秒。旁边的告示写明：『侧线未经调度许可禁止使用』。电车前灯已穿出树林，沿坡道逼近。",
+      "effects": [
+        { "type": "stage", "action": "trolley:reveal", "label": "道岔已显示" }
+      ],
+      "next": "t_decision"
+    },
+    {
+      "id": "t_decision",
+      "type": "decision",
+      "title": "电车到达分歧点前",
+      "kicker": "DECISION 01 / 不可逆",
+      "prompt": "保持主线，还是现在扳下道岔？",
+      "context": "手柄只能操作一次。扳下后，电车会进入有一人的侧线；保持原位，电车会继续驶向主线上的五人。撤离警告已经播出，两条轨道上的人都还没有离开。",
+      "timeLimitSec": 75,
+      "timeoutOptionId": "t_do_nothing",
+      "options": [
+        {
+          "id": "t_pull",
+          "label": "扳下道岔，让电车进入侧线",
+          "summary": "电车改道后，主线五人可避开碰撞，侧线巡检员将遭到撞击。",
+          "detail": "这是你的主动操作：你已看见侧线有人，也能预见改道会把碰撞带给他。调度告示同时禁止未经许可使用侧线。",
+          "tone": "caution",
+          "badge": "主动干预",
+          "tags": ["功利主义", "主动伤害"],
+          "effects": [
+            { "type": "stage", "action": "trolley:switch-side", "label": "道岔已切换" },
+            { "type": "flag", "key": "choice", "value": "pull" }
+          ],
+          "next": "t_pull"
+        },
+        {
+          "id": "t_do_nothing",
+          "label": "保持道岔原位，让电车继续走主线",
+          "summary": "电车将撞向主线五人，侧线巡检员可以避开。",
+          "detail": "你没有把电车引向侧线；与此同时，你在知道主线后果的情况下没有使用手柄。",
+          "tone": "neutral",
+          "badge": "不干预",
+          "tags": ["义务论", "放任伤害"],
+          "effects": [
+            { "type": "stage", "action": "trolley:main", "label": "道岔保持原位" },
+            { "type": "flag", "key": "choice", "value": "idle" }
+          ],
+          "next": "t_idle"
+        }
+      ]
+    },
+    {
+      "id": "t_pull",
+      "type": "consequence",
+      "title": "电车进入侧线",
+      "kicker": "CONSEQUENCE / 侧线",
+      "speaker": "事故记录",
+      "focus": "side",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "trolley:impact-side", "label": "侧线发生碰撞" },
+        { "type": "metric", "key": "lives", "delta": 10, "reason": "主线五人避开碰撞，侧线一人死亡" },
+        { "type": "metric", "key": "intent", "delta": -8, "reason": "你操作手柄，将电车引向已确认的巡检员" },
+        { "type": "metric", "key": "justice", "delta": -5, "reason": "侧线巡检员没有参与改道决定" },
+        { "type": "flag", "key": "outcome", "value": "side-hit" }
+      ],
+      "text": "手柄落进锁槽，岔尖贴向另一侧钢轨。电车在你前方转弯，巡检员听见轮轨声后站起，手里的记录板掉在地上。碰撞发生后，主线上的五个人朝控制台跑来，有人还扶着安全帽喘气。救援频道里报出一死、五人生还。领头工人抓住门框问：『你怎么不早点扳？』你看着侧线，没能立刻回答。",
+      "next": "t_aftermath"
+    },
+    {
+      "id": "t_idle",
+      "type": "consequence",
+      "title": "道岔保持原位",
+      "kicker": "CONSEQUENCE / 主线",
+      "speaker": "事故记录",
+      "focus": "main",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "trolley:impact-main", "label": "主线发生碰撞" },
+        { "type": "metric", "key": "lives", "delta": -12, "reason": "电车沿主线碰撞，五名工人死亡" },
+        { "type": "metric", "key": "intent", "delta": 4, "reason": "未操作手柄，电车路径未被改变" },
+        { "type": "metric", "key": "justice", "delta": 2, "reason": "未由你指定另一名工人承受改道风险" },
+        { "type": "flag", "key": "outcome", "value": "main-hit" }
+      ],
+      "text": "你的手指已经碰到手柄，最后停在原位。电车冲过弯道，检测车被撞离钢轨，五顶安全帽陆续从前灯里消失。侧线巡检员站起来，朝主线跑了几步，又回头看你。无线电里有人连续呼叫检修组编号，没有回应。警报停下后，你在操作日志上写下：『18:43，道岔未动作。』",
+      "next": "t_aftermath"
+    },
+    {
+      "id": "t_aftermath",
+      "type": "narrative",
+      "title": "调查员打开摄像机",
+      "kicker": "21:06 / 事故之后",
+      "speaker": "独立调查员",
+      "focus": "wreck",
+      "ambience": "tense",
+      "text": "21:06，调查员把摄像机对准控制台，又在你面前摆开矿区平面图。图上标着主线五个作业编号和侧线一个巡检位，手柄动作记录单独放在一旁。她按下录音键：『从警报响起开始说。你看见了什么，什么时候做的决定？』她停顿一下，又补充：『不确定的地方也请直接说，我们会和调度记录逐项核对。』",
+      "next": "t_responsibility"
+    },
+    {
+      "id": "t_responsibility",
+      "type": "decision",
+      "title": "向调查组说明经过",
+      "kicker": "DECISION 02 / 事后",
+      "prompt": "操作记录已经调取。你准备怎样回答调查员？",
+      "context": "制动维护记录和手柄日志都已封存。你可以提交完整陈述，也可以限制回答、等待律师，或先指出维护部门的问题；调查员会把你说的内容写进事故材料。",
+      "options": [
+        {
+          "id": "t_own",
+          "label": "提交完整陈述和全部操作记录",
+          "summary": "按时间说明你看到了多少人、为何操作或保持道岔，以及当时无法确认的情况。",
+          "detail": "把无线电内容、手柄日志和个人陈述一并提交，允许调查组和同事核对你的判断。",
+          "tone": "positive",
+          "badge": "完整陈述",
+          "tags": ["主动担责", "完整说明"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "own" }
+          ],
+          "next": "t_closing"
+        },
+        {
+          "id": "t_limited",
+          "label": "只逐项回答调查员的提问",
+          "summary": "不补充未被问及的现场细节，也不主动解释自己的判断过程。",
+          "detail": "这种回答会留在记录中，但调查员仍需从其他材料还原你当时掌握的信息和理由。",
+          "tone": "caution",
+          "badge": "有限披露",
+          "tags": ["有限披露"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "limited" }
+          ],
+          "next": "t_closing"
+        },
+        {
+          "id": "t_silent",
+          "label": "在律师到场前不作陈述",
+          "summary": "说明自己将行使沉默权，暂不回答操作动机和现场判断。",
+          "detail": "调查会依据监控、日志和证人证言继续；你的理由不会出现在这份个人陈述中。",
+          "tone": "danger",
+          "badge": "沉默",
+          "tags": ["沉默"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "silent" }
+          ],
+          "next": "t_closing"
+        },
+        {
+          "id": "t_blame",
+          "label": "先说明维护部门的制动失修责任",
+          "summary": "把陈述集中在制动系统失修和报修记录上，不展开自己的现场决定。",
+          "detail": "维护记录会进入调查范围，但你仍需回答为何扳动或为何保持道岔；若略去这部分，操作经过将缺少你的说明。",
+          "tone": "danger",
+          "badge": "转嫁",
+          "tags": ["责任转嫁"],
+          "effects": [
+            { "type": "flag", "key": "responsibility", "value": "blame" }
+          ],
+          "next": "t_closing"
+        }
+      ]
+    },
+    {
+      "id": "t_closing",
+      "type": "narrative",
+      "title": "一百四十七页事故报告",
+      "kicker": "EPILOGUE / 事故报告",
+      "speaker": "调查组",
+      "focus": "overview",
+      "ambience": "calm",
+      "text": "事故报告共一百四十七页，附着制动检修单、调度录音、手柄日志和六名现场人员的作业资料。调查员在听证会上逐项问你：警报响起时看到了什么，为什么这样操作，事后提交的材料是否完整。有人追问伤亡人数，有人追问侧线使用权限和主动改道的责任。你把能确认的内容留在笔录里；仍有分歧的部分，报告如实标注为争议事项。",
+      "next": "t_end"
+    },
+    {
+      "id": "t_end",
+      "type": "end",
+      "title": "手柄动作与笔录归档",
+      "summary": "道岔手柄在什么时刻动过、你交的陈述写了哪些内容，两份材料已经对上；报告按记录汇总伤亡与责任条目。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "t_rule_lives_pull",
+      "label": "改道后的伤亡结果",
+      "description": "改道让主线五人避开碰撞，侧线一人死亡；生命指标按这一结果调整。",
+      "kind": "positive",
+      "when": { "kind": "decision", "nodeId": "t_decision", "optionId": "t_pull" },
+      "effects": {
+        "metrics": [
+          { "key": "lives", "delta": 6, "reason": "死亡人数由五人减为一人" },
+          { "key": "trust", "delta": 2, "reason": "部分公众会认可以减少伤亡为目的的干预" }
+        ],
+        "tags": ["生命数量优先"]
+      }
+    },
+    {
+      "id": "t_rule_active_harm",
+      "label": "主动改道造成一人死亡",
+      "description": "你已确认侧线有人，仍操作手柄改变电车路径，因此这次死亡与主动干预直接相关。",
+      "kind": "negative",
+      "when": { "kind": "decision", "nodeId": "t_decision", "optionId": "t_pull" },
+      "effects": {
+        "metrics": [
+          { "key": "intent", "delta": -5, "reason": "改道动作直接造成侧线碰撞" },
+          { "key": "justice", "delta": -4, "reason": "侧线巡检员未参与改道决定" }
+        ],
+        "tags": ["主动伤害"]
+      }
+    },
+    {
+      "id": "t_rule_omission",
+      "label": "保持原位的后果",
+      "description": "你在知道主线有五人、手柄仍可操作的情况下未改道，五人随后死亡。",
+      "kind": "negative",
+      "when": { "kind": "decision", "nodeId": "t_decision", "optionId": "t_do_nothing" },
+      "effects": {
+        "metrics": [
+          { "key": "lives", "delta": -7, "reason": "主线五人死亡" },
+          { "key": "trust", "delta": -4, "reason": "部分公众难以接受值守员未作干预" }
+        ],
+        "tags": ["放任伤害"]
+      }
+    },
+    {
+      "id": "t_rule_omission_restraint",
+      "label": "未把伤害引向侧线",
+      "description": "你没有操作手柄，也没有指定侧线巡检员代替主线工人承受碰撞。",
+      "kind": "neutral",
+      "when": { "kind": "decision", "nodeId": "t_decision", "optionId": "t_do_nothing" },
+      "effects": {
+        "metrics": [
+          { "key": "intent", "delta": 4, "reason": "电车路径未经你的主动改变" },
+          { "key": "justice", "delta": 2, "reason": "未单方面指定侧线人员承担风险" }
+        ],
+        "tags": ["不干预原则"]
+      }
+    },
+    {
+      "id": "t_rule_inspect_lever",
+      "label": "核对道岔机械状态",
+      "description": "你查看手柄、锁止销与岔尖联动标识，确认道岔处于可用状态，操作能够实际改变行车路径。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "t_lever" },
+      "effects": {
+        "metrics": [
+          { "key": "justice", "delta": 3, "reason": "决定参考了可复核的机械状态" },
+          { "key": "accountability", "delta": 2, "reason": "检查结果可供后续复核" }
+        ],
+        "tags": ["机械核查"]
+      }
+    },
+    {
+      "id": "t_rule_inspect_notice",
+      "label": "读到侧线禁用告示",
+      "description": "你读到侧线禁用告示，知道未经许可改道违反现场作业限制。",
+      "kind": "neutral",
+      "when": { "kind": "inspected", "id": "t_notice" },
+      "effects": {
+        "metrics": [
+          { "key": "justice", "delta": 2, "reason": "侧线禁用要求已纳入决定" },
+          { "key": "intent", "delta": 2, "reason": "操作时已知改道涉及程序限制" }
+        ],
+        "tags": ["程序意识"]
+      }
+    },
+    {
+      "id": "t_rule_inspect_workers",
+      "label": "核对两侧作业人数",
+      "description": "你核对作业牌和现场标识，确认主线有五名检修工人、侧线有一名巡检员。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "t_workers" },
+      "effects": {
+        "metrics": [
+          { "key": "intent", "delta": 2, "reason": "已确认两条轨道的人员分布" },
+          { "key": "trust", "delta": 2, "reason": "人数有作业标识可供核验" }
+        ],
+        "tags": ["事实核验"]
+      }
+    },
+    {
+      "id": "t_rule_own",
+      "label": "提交完整陈述与记录",
+      "description": "你提交操作记录，说明现场观察、行动理由和不确定之处，调查组可据此复核决定。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "responsibility", "value": "own" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": 12, "reason": "主动说明本人操作和理由" },
+          { "key": "trust", "delta": 7, "reason": "陈述可与日志和录音相互核对" },
+          { "key": "justice", "delta": 4, "reason": "调查材料包含完整的决定过程" }
+        ],
+        "tags": ["主动担责"]
+      }
+    },
+    {
+      "id": "t_rule_limited",
+      "label": "陈述范围受限",
+      "description": "你回答了调查员的问题，但未补充所有现场观察和行动理由，部分判断只能间接还原。",
+      "kind": "neutral",
+      "when": { "kind": "flag", "key": "responsibility", "value": "limited" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -4, "reason": "本人判断过程说明不完整" },
+          { "key": "trust", "delta": -3, "reason": "缺失细节增加外界核验难度" }
+        ],
+        "tags": ["有限披露"]
+      }
+    },
+    {
+      "id": "t_rule_silent",
+      "label": "行使沉默权",
+      "description": "你等律师到场，不作个人陈述；事故结果有据可查，你的现场理由未进入笔录。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "responsibility", "value": "silent" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -9, "reason": "未提交本人操作理由" },
+          { "key": "trust", "delta": -6, "reason": "部分同事和公众可能将沉默理解为回避" },
+          { "key": "justice", "delta": -4, "reason": "调查缺少当事人对决定过程的说明" }
+        ],
+        "tags": ["沉默"]
+      }
+    },
+    {
+      "id": "t_rule_blame",
+      "label": "回避本人的操作说明",
+      "description": "你把陈述集中在制动失修上，没有说明自己当时如何使用或保留道岔，维护责任与现场操作被混在同一段陈述里。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "responsibility", "value": "blame" },
+      "effects": {
+        "metrics": [
+          { "key": "accountability", "delta": -13, "reason": "未交代本人在现场的决定" },
+          { "key": "trust", "delta": -10, "reason": "回避操作经过削弱陈述可信度" },
+          { "key": "justice", "delta": -6, "reason": "维护责任与现场责任未被分别说明" }
+        ],
+        "tags": ["责任转嫁"]
+      }
+    },
+    {
+      "id": "t_rule_own_after_pull",
+      "label": "公开说明改道依据",
+      "description": "你明确说明为何用改道减少伤亡，也承认侧线人员因此死亡，陈述可与现场记录核对。",
+      "kind": "positive",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "t_decision", "optionId": "t_pull" },
+          { "kind": "flag", "key": "responsibility", "value": "own" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "intent", "delta": 4, "reason": "减少伤亡的改道理由已公开" },
+          { "key": "trust", "delta": 3, "reason": "陈述与道岔操作记录一致" }
+        ],
+        "tags": ["公开的功利判断"]
+      }
+    },
+    {
+      "id": "t_rule_own_after_idle",
+      "label": "公开说明不改道的理由",
+      "description": "你说明自己为何拒绝把电车引向侧线，并在笔录中承认主线五人死亡的后果。",
+      "kind": "positive",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "t_decision", "optionId": "t_do_nothing" },
+          { "kind": "flag", "key": "responsibility", "value": "own" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "justice", "delta": 4, "reason": "不改道的权利理由已写入笔录" },
+          { "key": "accountability", "delta": 3, "reason": "本人未操作造成的后果已明确承认" }
+        ],
+        "tags": ["原则一致"]
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "t_out_evasive",
+      "kicker": "调查报告 / 说明缺项",
+      "title": "笔录中缺少现场说明",
+      "description": "你的回答集中在制动多久没检修、报修单压在谁手里，或者从律师到场前一句没讲；警报响起之后你自己在控制台前做了什么，笔录里没有。手柄日志、现场监控和工人证言照常归档，伤亡数字也不会因为陈述方式改变。空下来的是你当时那一层：两侧各几个人、什么时候看清、手有没有碰到手柄。这一段只能由别人的说法补上。",
+      "advice": "补一份按时间排列的个人说明：18:42 看到了什么、什么时候确认两侧人数、为什么操作或者没有操作、哪些情况当时判断不了。如果打算先请律师，可以把事实清单和依法暂缓回答的部分分成两栏写，免得两件事混在一起。",
+      "when": { "kind": "flag", "key": "responsibility", "op": "in", "value": ["silent", "blame"] }
+    },
+    {
+      "id": "t_out_utilitarian",
+      "kicker": "调查报告 / 改道经过已说明",
+      "title": "改道救下五人之后",
+      "description": "你扳下手柄，电车进了侧线。主线五人活着退回控制台，侧线那名巡检员没能离开。事后你交出了完整陈述：看见的人员分布、那块禁止使用侧线的告示、你当时怎么权衡。日志对得上手柄动作的时间，也能核对两侧人数，却对不上另一件事：那人正在作业，无从同意，侧线本写明未经许可不得使用。救下五人和撞向一人，在报告里是两个条目，各自的依据并不相同。",
+      "advice": "复看这份材料时可以再往下问一层：把两条轨道上的人数互换，你还会依据什么决定扳不扳？把这个标准写下来，下次用同样的时间、同样的信息量去检验它是否还站得住。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "t_decision", "optionId": "t_pull" },
+          { "kind": "flag", "key": "responsibility", "value": "own" }
+        ]
+      }
+    },
+    {
+      "id": "t_out_restraint",
+      "kicker": "调查报告 / 未改道的说明",
+      "title": "保持道岔原位之后",
+      "description": "你的手指停在手柄上，电车沿主线冲过弯道，五名工人没能撤出检测车，侧线的巡检员活了下来。事后你回答了调查员的问题，完整的或者只答了几句。你没有做的动作很明确：没有把碰撞交给另一个人。可材料另一边摆着五条人命。至于你没有扳的理由，材料里还分不清落在哪一处：是不愿替旁人指定谁该被撞，是自己没有调度权限，还是怕担下主动操作的责任。这几样要对照知情时间和手柄状态再核。",
+      "advice": "把「不主动改道」写成可以核对的判断：它依据的是侧线人员的权利、调度权限，还是你对操作责任的顾虑。然后对照五人的作业记录、广播重复的时间和手柄状态，逐条标出哪些事实支持这个决定，哪些后果你当时估计错了。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "t_decision", "optionId": "t_do_nothing" },
+          { "kind": "flag", "key": "responsibility", "op": "in", "value": ["own", "limited"] }
+        ]
+      }
+    },
+    {
+      "id": "t_out_open",
+      "kicker": "调查报告 / 待补充",
+      "title": "待核对的改道理由",
+      "description": "你扳了道岔，五人获救、侧线一人死亡，时间码和手柄日志都对得上。你的陈述只回答了被问到的部分：什么时候看清两侧各有几个人、有没有读到那块禁用告示、为什么判断改道还来得及，这些都留着没讲。空白不会改变已经发生的事，只会让调查改用录音和证人证言来推测你的动机。",
+      "advice": "把没有主动说明的部分补成一份清单：何时确认两侧人数、是否读到禁用告示、为何认为改道可行。逐项注明证据来源，再决定哪些内容需要补交调查组。",
+      "fallback": true
+    }
+  ]
+}

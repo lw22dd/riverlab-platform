@@ -1,0 +1,135 @@
+
+@import "tailwindcss";
+
+:root {
+  font-family: var(--rl-font);
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --color-primary: var(--rl-primary);
+  --color-primary-hover: var(--rl-primary-hover);
+  --color-primary-light: var(--rl-primary-soft);
+  --color-success: var(--rl-success);
+  --color-warning: var(--rl-warning-bright);
+  --color-danger: var(--rl-danger-bright);
+
+  --node-default: #5f95ff;
+  --node-has-pano: var(--rl-celadon);
+  --node-no-pano: #a0b4c8;
+  --node-selected: var(--rl-primary);
+
+  --edge-default: #8fb6c0;
+  --edge-selected: var(--rl-primary);
+
+  --toolbar-height: 56px;
+  --sidebar-width: 320px;
+  --panel-padding: 16px;
+
+  --bg-canvas: var(--rl-bg);
+  --bg-toolbar: var(--rl-surface);
+  --bg-sidebar: var(--rl-surface);
+  --bg-panel: var(--rl-surface-2);
+  --bg-hover: var(--rl-bg-alt);
+  --bg-active: var(--rl-primary-soft);
+
+  --border-color: var(--rl-border);
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+
+  --shadow-sm: var(--rl-sh-sm);
+  --shadow-md: var(--rl-sh-md);
+  --shadow-lg: var(--rl-sh-lg);
+
+  --font-family: var(--rl-font);
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  text-align: left;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rl-border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rl-faint);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+}
+
+.x6-graph-scroller {
+  overflow: hidden !important;
+}
+
+.x6-node {
+  cursor: move;
+}
+
+.x6-edge {
+  cursor: pointer;
+}
+
+.x6-widget-selection-box {
+  border: 2px solid var(--color-primary) !important;
+  background: rgba(15, 110, 132, 0.05) !important;
+}
+
+.x6-widget-selection-inner {
+  border: 1px dashed var(--color-primary) !important;
+}
+
+.x6-widget-snapline {
+  z-index: 1000 !important;
+}

@@ -1,0 +1,720 @@
+{
+  "id": "autonomous-driving",
+  "title": "自动驾驶",
+  "subtitle": "暴雨测试车的 2.1 秒避险记录",
+  "tagline": "你在远端写入决策表，测试车按表执行，EDR 留下每次动作。",
+  "description": "你是 L4 自动驾驶决策工程师。测试前需配置 1.0.0 版决策表，说明车辆如何处理年龄、性别、行人与乘员、法规约束和伤害减损。程序写入后，车辆在暴雨中自动运行；碰撞后的感知数据与决策日志也按同一套规则处置。",
+  "domain": "autonomous",
+  "version": "1.0.0",
+  "difficulty": "挑战",
+  "estimatedMinutes": 9,
+  "tags": ["算法条款", "自动驾驶", "风险分配", "EDR 处置"],
+  "brief": {
+    "role": "L4 自动驾驶决策工程师 / 决策表配置负责人",
+    "premise": "23:47，临江路暴雨测试。决策表 1.0.0 已写入。测试车以 58 km/h 进入学校路段，雨幕使感知置信度降至 78%。",
+    "objective": "配置避险与数据处置条款，随后核对车辆执行分支、EDR 记录和事故后果。",
+    "constraints": [
+      "决策表写入后，远端人员不能接管车辆",
+      "配置范围包括年龄、性别、道路使用者及规则冲突",
+      "湿滑路面下的制动距离估计为 18.4 米",
+      "对向车道有一辆 12 吨货车",
+      "EDR 原始数据列入事故调查取证清单"
+    ],
+    "ethicsLens": "复盘分别核对决策表的风险分配条款、车辆实际动作和 EDR 取证状态。各项记录陈述可验证事实，不预设某类道路使用者应当优先。",
+    "safetyNotice": "本场景为抽象仿真，伤情仅用于结果计算，不展示伤害画面。"
+  },
+  "metrics": [
+    {
+      "key": "safety",
+      "label": "生命安全",
+      "shortLabel": "生命",
+      "description": "按仿真结果记录车内乘员、行人和其他道路使用者的总体生命影响。",
+      "initial": 74,
+      "weight": 0.3,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "legality",
+      "label": "法规遵从",
+      "shortLabel": "合规",
+      "description": "核对车辆动作是否遵守交通法规，以及事故数据处置是否满足调查义务。",
+      "initial": 76,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "ethics",
+      "label": "伦理一致",
+      "shortLabel": "伦理",
+      "description": "核对实际动作与预设决策表的一致程度，以及规则说明能否对应执行日志。",
+      "initial": 68,
+      "weight": 0.2,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "transparency",
+      "label": "信息透明",
+      "shortLabel": "透明",
+      "description": "检查感知不确定性、决策依据和事故数据是否完整记录并可供复核。",
+      "initial": 66,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "trust",
+      "label": "公共信任",
+      "shortLabel": "信任",
+      "description": "记录相关道路使用者、监管方和公众对后续自动驾驶测试的接受程度。",
+      "initial": 70,
+      "weight": 0.15,
+      "min": 0,
+      "max": 100
+    }
+  ],
+  "startNodeId": "a_intro",
+  "nodes": [
+    {
+      "id": "a_intro",
+      "type": "narrative",
+      "title": "测试记录：23:47",
+      "kicker": "TEST LOG / 临江路",
+      "speaker": "自动驾驶测试车 · 决策日志",
+      "focus": "car",
+      "ambience": "tense",
+      "text": "23:47:00，雨刷处于高频档，车速 58 km/h，感知置信度 78%。融合模块标记：前方 42 米，三名行人进入斑马线；对向 31 米，12 吨货车。决策表 1.0.0 已锁定，人工接管请求关闭。后续制动、转向与数据处置均由该表触发，远端终端仅保留监视。",
+      "next": "a_policy"
+    },
+    {
+      "id": "a_policy",
+      "type": "decision",
+      "title": "写入决策表 1.0.0",
+      "kicker": "ENGINEERING NOTE / 测试前配置",
+      "prompt": "请选择本车的避险基线；写入后，测试车将按对应分支执行。",
+      "context": "本项配置会编译进决策表并进入系统说明书。事故复盘时，调查员将用它对照实际动作与 EDR 记录。",
+      "focus": "overview",
+      "options": [
+        {
+          "id": "a_policy_occupant",
+          "label": "基线 A：乘员风险优先",
+          "summary": "优先降低乘员损伤；需要避让时，可选择驶向右侧护栏。",
+          "detail": "该条目记录乘员保护在决策表中的优先级。说明书须同时列出对行人和其他车辆可能增加的风险，供测试审批与事故复核查阅。",
+          "tone": "caution",
+          "badge": "乘员条款",
+          "tags": ["乘员保护", "契约责任"],
+          "effects": [
+            { "type": "flag", "key": "ethicsPolicy", "value": "occupant" },
+            { "type": "log", "text": "决策表 1.0.0 已写入：乘员风险优先。", "title": "基线配置" }
+          ],
+          "next": "a_rain"
+        },
+        {
+          "id": "a_policy_minimize",
+          "label": "基线 B：总体伤害最小化",
+          "summary": "按全部道路使用者的预期伤亡选择动作，乘员也计入同一计算。",
+          "detail": "执行日志需保留各轨迹的伤害估计与最终分支。若乘员承担更高风险，报告应列出触发条件及计算依据。",
+          "tone": "info",
+          "badge": "总体减损",
+          "tags": ["总体伤害", "结果计算"],
+          "effects": [
+            { "type": "flag", "key": "ethicsPolicy", "value": "minimize" },
+            { "type": "log", "text": "决策表 1.0.0 已写入：总体伤害最小化。", "title": "基线配置" }
+          ],
+          "next": "a_rain"
+        },
+        {
+          "id": "a_policy_law",
+          "label": "基线 C：交通规则约束",
+          "summary": "将车道、速度等法规约束设为动作边界，再执行可用避险动作。",
+          "detail": "报告分别记录合规状态与伤害结果；符合车道规则的分支仍需说明其实际减损效果。",
+          "tone": "neutral",
+          "badge": "规则约束",
+          "tags": ["法规约束", "义务条款"],
+          "effects": [
+            { "type": "flag", "key": "ethicsPolicy", "value": "law" },
+            { "type": "log", "text": "决策表 1.0.0 已写入：交通规则约束。", "title": "基线配置" }
+          ],
+          "next": "a_rain"
+        },
+        {
+          "id": "a_policy_balanced",
+          "label": "基线 D：弱势使用者与可解释性",
+          "summary": "在法规约束内提高行人保护权重，并保存接管接口与决策依据记录。",
+          "detail": "各权重和优先级随说明书发布。复核时可直接比对预警、候选轨迹、执行分支及接管记录。",
+          "tone": "positive",
+          "badge": "权重公开",
+          "tags": ["行人权重", "执行可解释"],
+          "effects": [
+            { "type": "flag", "key": "ethicsPolicy", "value": "balanced" },
+            { "type": "metric", "key": "transparency", "delta": 3, "reason": "权重与优先级已写入系统说明书" },
+            { "type": "log", "text": "决策表 1.0.0 已写入：弱势使用者与可解释性。", "title": "基线配置" }
+          ],
+          "next": "a_rain"
+        }
+      ]
+    },
+    {
+      "id": "a_rain",
+      "type": "narrative",
+      "title": "78% 置信度告警",
+      "kicker": "00:00:02 / 融合感知",
+      "speaker": "测试车感知日志",
+      "focus": "crosswalk",
+      "ambience": "tense",
+      "text": "00:00:02，右侧人行道出现足球，三名儿童随后进入斑马线。雨幕造成点云断续，行人目标置信度为 78%。对向货车穿过积水，距离持续缩短。轨迹预测叠层标出制动、右避、左避等分支，均带碰撞风险标记。决策模块转入 2.1 秒执行窗口。",
+      "effects": [
+        {
+          "type": "stage",
+          "action": "reveal-crosswalk",
+          "label": "叠加感知轨迹"
+        }
+      ],
+      "next": "a_event"
+    },
+    {
+      "id": "a_event",
+      "type": "decision",
+      "title": "碰撞前 2.1 秒",
+      "kicker": "EXECUTION / 决策表分支",
+      "prompt": "为本次执行指定分支。系统显示距碰撞 2.1 秒。",
+      "context": "这一步代表决策表当场选出的分支。确认后由车辆自行完成，远端不能接管；动作、时刻和命中的规则都会写进 EDR。",
+      "timeLimitSec": 30,
+      "timeoutOptionId": "a_act_brake",
+      "options": [
+        {
+          "id": "a_act_brake",
+          "label": "执行制动分支",
+          "summary": "保持本车道，ABS 全力介入，以湿地制动为主要减损措施。",
+          "detail": "当前湿地制动距离估计为 18.4 米。报告将分别记录车道合规、实际减速、停车位置和斑马线碰撞结果。",
+          "tone": "neutral",
+          "badge": "车道制动",
+          "tags": ["本车道", "ABS 制动"],
+          "effects": [
+            { "type": "stage", "action": "ego-brake", "label": "本车道全力制动" },
+            { "type": "flag", "key": "action", "value": "brake" }
+          ],
+          "next": "a_brake"
+        },
+        {
+          "id": "a_act_right",
+          "label": "执行右避分支",
+          "summary": "转向右侧波形护栏，预计以约 46 km/h 擦撞，避让三名儿童。",
+          "detail": "该分支将主要冲击分配给车身、乘员和护栏。事后需核对乘员伤情、行人状态及货车避让余量。",
+          "tone": "caution",
+          "badge": "右避护栏",
+          "tags": ["行人避让", "护栏吸能"],
+          "effects": [
+            { "type": "stage", "action": "ego-swerve-right", "label": "右转向护栏避让" },
+            { "type": "flag", "key": "action", "value": "right" }
+          ],
+          "next": "a_right"
+        },
+        {
+          "id": "a_act_left",
+          "label": "执行左避分支",
+          "summary": "越过中心线进入对向车道，为斑马线留出空间。",
+          "detail": "12 吨货车位于该轨迹上。此分支会把货车司机纳入碰撞风险，报告需单列越线、车内伤情和第三方伤情。",
+          "tone": "danger",
+          "badge": "对向碰撞",
+          "tags": ["中心线跨越", "第三方风险"],
+          "effects": [
+            { "type": "stage", "action": "ego-swerve-left", "label": "左转向对向车道" },
+            { "type": "flag", "key": "action", "value": "left" }
+          ],
+          "next": "a_left"
+        },
+        {
+          "id": "a_act_horn",
+          "label": "执行巡航鸣笛分支",
+          "summary": "维持巡航并鸣笛，按行人会主动避让的预测通过斑马线。",
+          "detail": "行人避让预测置信度为 61%。该分支不主动减速，需记录鸣笛后的行人反应、实际车速及碰撞结果。",
+          "tone": "danger",
+          "badge": "行人预测",
+          "tags": ["保持巡航", "避让预测"],
+          "effects": [
+            { "type": "stage", "action": "ego-continue", "label": "巡航并触发鸣笛" },
+            { "type": "flag", "key": "action", "value": "horn" }
+          ],
+          "next": "a_horn"
+        }
+      ]
+    },
+    {
+      "id": "a_brake",
+      "type": "consequence",
+      "title": "制动分支：斑马线内停车",
+      "kicker": "EDR RECONSTRUCTION / 本车道制动",
+      "speaker": "EDR 事故重建",
+      "focus": "crosswalk",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "impact-pedestrians", "label": "记录斑马线碰撞" },
+        { "type": "metric", "key": "safety", "delta": -14, "reason": "18.4 米湿地制动条件下仍发生行人碰撞" },
+        { "type": "metric", "key": "legality", "delta": 2, "reason": "制动全过程保持在本车道内" },
+        { "type": "metric", "key": "ethics", "delta": -3, "reason": "守规分支未能降低本次总体伤害" },
+        { "type": "flag", "key": "outcome", "value": "pedestrian-hit" }
+      ],
+      "text": "程序调用本车道制动分支，ABS 在末段介入。车辆最终停在斑马线中央，三名儿童被撞倒，其中一人重伤。EDR 已保存制动时点、车速和 78% 感知置信度；重建条件显示，置信度增加 12%，对应制动提前 0.4 秒。后果栏记录行人伤情，车道合规与减损不足分别列入复核。",
+      "next": "a_aftermath"
+    },
+    {
+      "id": "a_right",
+      "type": "consequence",
+      "title": "右避分支：46 km/h 擦撞护栏",
+      "kicker": "EDR RECONSTRUCTION / 右避护栏",
+      "speaker": "EDR 事故重建",
+      "focus": "guardrail",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "guardrail-impact", "label": "记录护栏碰撞" },
+        { "type": "metric", "key": "safety", "delta": -3, "reason": "主要冲击由乘员车身与波形护栏承担" },
+        { "type": "metric", "key": "ethics", "delta": 5, "reason": "右避执行降低行人直接碰撞风险" },
+        { "type": "metric", "key": "trust", "delta": 3, "reason": "现场记录确认三名儿童未受车身直接撞击" },
+        { "type": "flag", "key": "outcome", "value": "barrier-hit" }
+      ],
+      "text": "程序执行右避，将主要冲击分配给车辆与护栏。测试车以 46 km/h 擦撞波形护栏，车门凹陷，安全气囊弹出；货车距车身约半米通过。EDR 封存转向、碰撞和气囊触发记录。三名儿童摔倒在斑马线边缘，未受车身直接撞击；后排乘员锁骨骨折。后果栏分别登记行人保护、乘员伤情和设施损伤。",
+      "next": "a_aftermath"
+    },
+    {
+      "id": "a_left",
+      "type": "consequence",
+      "title": "左避分支：与货车相撞",
+      "kicker": "EDR RECONSTRUCTION / 越线左避",
+      "speaker": "EDR 事故重建",
+      "focus": "truck",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "truck-impact", "label": "记录货车碰撞" },
+        { "type": "metric", "key": "safety", "delta": -18, "reason": "对向碰撞造成车内两人及货车司机伤害" },
+        { "type": "metric", "key": "legality", "delta": -12, "reason": "左避执行越过中心线进入对向车道" },
+        { "type": "metric", "key": "trust", "delta": -6, "reason": "货车司机被纳入本次碰撞后果" },
+        { "type": "flag", "key": "outcome", "value": "truck-hit" }
+      ],
+      "text": "程序越过中心线，把斑马线空间留给行人，同时进入对向货车轨迹。货车司机在 0.8 秒内鸣笛并向右急转，两车仍以重叠角度相撞。EDR 保留越线时点、货车响应和碰撞记录。三名儿童安全；车内两人重伤，货车司机受困变形驾驶室 26 分钟。第三方伤情与越线行为进入独立复核项。",
+      "next": "a_aftermath"
+    },
+    {
+      "id": "a_horn",
+      "type": "consequence",
+      "title": "巡航分支：51 km/h 通过斑马线",
+      "kicker": "EDR RECONSTRUCTION / 巡航鸣笛",
+      "speaker": "EDR 事故重建",
+      "focus": "crosswalk",
+      "ambience": "critical",
+      "effects": [
+        { "type": "stage", "action": "impact-pedestrians", "label": "记录斑马线碰撞" },
+        { "type": "metric", "key": "safety", "delta": -24, "reason": "车辆未减速并以 51 km/h 进入斑马线" },
+        { "type": "metric", "key": "ethics", "delta": -12, "reason": "61% 避让预测被用作行人自行避险依据" },
+        { "type": "metric", "key": "legality", "delta": -4, "reason": "车辆通过斑马线前未充分减速" },
+        { "type": "metric", "key": "trust", "delta": -10, "reason": "巡航分支未触发基本制动冗余" },
+        { "type": "flag", "key": "outcome", "value": "pedestrian-hit" }
+      ],
+      "text": "程序按“行人将避让”分支保持巡航，仅发出鸣笛。一个孩子回头后未让开，测试车以 51 km/h 通过斑马线并发生碰撞。EDR 保存 61% 的避让预测置信度、鸣笛时点与实际车速。后果栏记录行人伤害及两个家庭受到的影响；未减速与预测失准列为安全复核项。",
+      "next": "a_aftermath"
+    },
+    {
+      "id": "a_aftermath",
+      "type": "narrative",
+      "title": "01:12 调查取证",
+      "kicker": "INVESTIGATION / 原始数据",
+      "speaker": "事故现场调查记录",
+      "focus": "aftermath",
+      "ambience": "tense",
+      "text": "01:12，调查员到场并取下测试车加密硬盘。取证清单列明原始感知数据、决策日志和人工接管记录，要求确认保存状态与完整性。碰撞前 2.1 秒的分支选择已有 EDR 时间戳。下一项由数据处置规则执行：确定哪些材料移交调查、是否脱敏，以及公众可查阅的范围。",
+      "next": "a_disclosure"
+    },
+    {
+      "id": "a_disclosure",
+      "type": "decision",
+      "title": "执行数据处置条款",
+      "kicker": "DATA HANDLING / 事故后",
+      "prompt": "请选择决策表 1.0.0 对本次事故数据的处置方式。",
+      "context": "处置结果将写入调查记录。需分别说明 EDR 原件去向、脱敏与公开范围，以及监管和独立复核能否取得完整材料。",
+      "options": [
+        {
+          "id": "a_data_full",
+          "label": "公开完整数据包",
+          "summary": "向调查组及公众提供感知片段、决策权重与接管记录。",
+          "detail": "该方式公开范围最大，模型弱点和无关人员隐私也会随之暴露；调查记录需保留完整公开清单。",
+          "tone": "positive",
+          "badge": "数据公开",
+          "tags": ["完整数据包"],
+          "effects": [
+            { "type": "flag", "key": "disclosure", "value": "full" },
+            { "type": "stage", "action": "reveal-edr", "label": "公开 EDR 数据" }
+          ],
+          "next": "a_closing"
+        },
+        {
+          "id": "a_data_third",
+          "label": "第三方脱敏审查",
+          "summary": "独立机构先核验完整数据并脱敏，再向监管和公众发布结论。",
+          "detail": "原始材料交由独立机构查验，公开版本经过脱敏。发布时点会晚于直接公开，报告需记录审查方、材料范围和延迟。",
+          "tone": "info",
+          "badge": "独立核验",
+          "tags": ["独立机构", "脱敏发布"],
+          "effects": [
+            { "type": "flag", "key": "disclosure", "value": "third" },
+            { "type": "stage", "action": "reveal-edr", "label": "第三方封存审查" }
+          ],
+          "next": "a_closing"
+        },
+        {
+          "id": "a_data_selective",
+          "label": "披露无故障片段",
+          "summary": "仅公开可用于说明系统无故障的感知和日志片段。",
+          "detail": "该清单无法呈现完整决策链。调查复核可能缺少低置信度、候选轨迹或分支选择等记录，厂商结论的外部可信度会降低。",
+          "tone": "caution",
+          "badge": "片段披露",
+          "tags": ["无故障片段"],
+          "effects": [
+            { "type": "flag", "key": "disclosure", "value": "selective" }
+          ],
+          "next": "a_closing"
+        },
+        {
+          "id": "a_data_delete",
+          "label": "删除感知与决策原件",
+          "summary": "以商业秘密为由，清除原始感知片段和决策日志。",
+          "detail": "该操作直接减少可取证材料，可能违反事故数据保全义务，并引发进一步监管调查。调查记录将注明保全义务风险及后续监管措施。",
+          "tone": "danger",
+          "badge": "数据清除",
+          "tags": ["原始记录删除"],
+          "effects": [
+            { "type": "flag", "key": "disclosure", "value": "delete" }
+          ],
+          "next": "a_closing"
+        }
+      ]
+    },
+    {
+      "id": "a_closing",
+      "type": "narrative",
+      "title": "调查报告：核对执行链",
+      "kicker": "INVESTIGATION MEMO / 次日",
+      "speaker": "调查委员会记录",
+      "focus": "overview",
+      "ambience": "calm",
+      "text": "次日的调查记录分成四栏：决策表 1.0.0 写了什么、测试车实际做了什么、EDR 和感知数据留下多少、事故最后造成哪些伤亡。工程组被要求逐条回答三个问题：78% 置信度有没有进入分支条件、18.4 米湿地制动估计用在哪一步、公开出来的材料够不够让别人独立复算一遍。修改意见对应到具体条目和测试项，列入下一轮配置审查。",
+      "next": "a_end"
+    },
+    {
+      "id": "a_end",
+      "type": "end",
+      "title": "测试与取证记录完成",
+      "summary": "决策表触发的是哪一条分支、车最终停在哪里、材料交出去多少，三项都已写进档案，复盘结果按这些条目生成。"
+    }
+  ],
+  "rules": [
+    {
+      "id": "a_rule_minimize_consistent",
+      "label": "最小伤害条款与右避一致",
+      "description": "决策表声明按总体伤害选择分支；实际执行为右避护栏。日志显示主要冲击由三名行人一侧转移到车身、乘员与护栏，可按既定条款复核。",
+      "kind": "positive",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "ethicsPolicy", "value": "minimize" },
+          { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_right" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "ethics", "delta": 7, "reason": "右避分支符合已写入的总体伤害条款" },
+          { "key": "trust", "delta": 2, "reason": "分支依据可由决策表与日志相互核对" }
+        ],
+        "tags": ["条款执行一致"]
+      }
+    },
+    {
+      "id": "a_rule_law_consistent",
+      "label": "守规分支的执行结果",
+      "description": "决策表将法规约束设为优先条件；车辆保持本车道并全力制动。合规项记录为未越线，后果项仍记录斑马线碰撞及行人伤情。",
+      "kind": "neutral",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "ethicsPolicy", "value": "law" },
+          { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_brake" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "legality", "delta": 8, "reason": "制动期间未越过车道约束" },
+          { "key": "ethics", "delta": 3, "reason": "实际动作符合法规优先条款" }
+        ],
+        "tags": ["守规执行"]
+      }
+    },
+    {
+      "id": "a_rule_occupant_consistent",
+      "label": "乘员条款已执行",
+      "description": "决策表将乘员风险列为优先项；实际动作为本车道制动或右避护栏。两条轨迹均避免车辆与对向货车正面相撞，外部风险另列于后果记录。",
+      "kind": "neutral",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "ethicsPolicy", "value": "occupant" },
+          { "kind": "decision", "nodeId": "a_event", "optionId": ["a_act_brake", "a_act_right"] }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "ethics", "delta": 2, "reason": "执行分支与乘员风险优先条款一致" },
+          { "key": "trust", "delta": -2, "reason": "车外风险承担者需另行核查该优先级" }
+        ],
+        "tags": ["乘员条款"]
+      }
+    },
+    {
+      "id": "a_rule_balanced_consistent",
+      "label": "弱势保护权重已执行",
+      "description": "决策表在法规约束内设置行人保护权重；实际执行右避护栏。说明书中的权重可与本次分支和 EDR 动作记录对应。",
+      "kind": "positive",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "ethicsPolicy", "value": "balanced" },
+          { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_right" }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "ethics", "delta": 5, "reason": "右避分支符合已写入的行人保护权重" },
+          { "key": "transparency", "delta": 3, "reason": "说明书条目可对应实际执行日志" }
+        ],
+        "tags": ["权重执行一致"]
+      }
+    },
+    {
+      "id": "a_rule_policy_inconsistent",
+      "label": "最小伤害条款未匹配",
+      "description": "决策表声明总体伤害最小化；实际动作却为左避撞向货车或保持巡航鸣笛。两条分支分别新增货车碰撞风险、保留未减速通过风险，需在复盘中标记条款与执行差异。",
+      "kind": "negative",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "ethicsPolicy", "value": "minimize" },
+          { "kind": "decision", "nodeId": "a_event", "optionId": ["a_act_left", "a_act_horn"] }
+        ]
+      },
+      "effects": {
+        "metrics": [
+          { "key": "ethics", "delta": -10, "reason": "实际分支与总体伤害声明不一致" },
+          { "key": "trust", "delta": -4, "reason": "公开日志无法由已声明条款解释该分支" }
+        ],
+        "tags": ["条款执行偏差"]
+      }
+    },
+    {
+      "id": "a_rule_protect_pedestrians",
+      "label": "右避降低行人直接碰撞",
+      "description": "程序选择右避护栏，主要冲击由车身和护栏承担。三名儿童未被车身直接撞击，乘员锁骨骨折及设施损伤同时记入后果。",
+      "kind": "positive",
+      "when": { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_right" },
+      "effects": {
+        "metrics": [
+          { "key": "safety", "delta": 8, "reason": "三名儿童未受车身直接撞击" },
+          { "key": "trust", "delta": 3, "reason": "行人保护结果有现场记录支持" },
+          { "key": "ethics", "delta": 2, "reason": "风险转移方向已在报告中列明" }
+        ],
+        "tags": ["右避行人保护"]
+      }
+    },
+    {
+      "id": "a_rule_strict_brake",
+      "label": "本车道制动记录",
+      "description": "程序保持本车道并触发全力制动。结果栏同时记录未越线与 18.4 米湿地制动条件下的斑马线碰撞，供下次修订制动触发条目。",
+      "kind": "neutral",
+      "when": { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_brake" },
+      "effects": {
+        "metrics": [
+          { "key": "legality", "delta": 6, "reason": "动作全程未进入对向车道" },
+          { "key": "ethics", "delta": -3, "reason": "已预见的行人伤害未由该分支消除" }
+        ],
+        "tags": ["车道制动"]
+      }
+    },
+    {
+      "id": "a_rule_inaction",
+      "label": "巡航鸣笛依赖行人预测",
+      "description": "程序以 61% 置信度预测行人会避让，实际仅鸣笛并保持巡航。车辆以 51 km/h 通过斑马线，减速义务和预测失效均进入后果记录。",
+      "kind": "negative",
+      "when": { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_horn" },
+      "effects": {
+        "metrics": [
+          { "key": "safety", "delta": -6, "reason": "未主动减速即以 51 km/h 通过斑马线" },
+          { "key": "ethics", "delta": -8, "reason": "61% 预测被用作行人自行避险依据" },
+          { "key": "trust", "delta": -8, "reason": "基本制动冗余未在该分支触发" }
+        ],
+        "tags": ["巡航预测失效"]
+      }
+    },
+    {
+      "id": "a_rule_truck_exposure",
+      "label": "左避引入对向碰撞",
+      "description": "程序越过中心线以避开行人，实际进入 12 吨货车轨迹。儿童安全，车内两人及货车司机承受碰撞后果，第三方风险单列。",
+      "kind": "negative",
+      "when": { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_left" },
+      "effects": {
+        "metrics": [
+          { "key": "legality", "delta": -8, "reason": "左避分支越过中心线驶入对向车道" },
+          { "key": "safety", "delta": -6, "reason": "货车司机因该分支承受碰撞风险" }
+        ],
+        "tags": ["对向第三方风险"]
+      }
+    },
+    {
+      "id": "a_rule_full_disclosure",
+      "label": "EDR 全量公开",
+      "description": "数据条款将原始感知、决策权重和接管记录提供给调查组与公众。外部可据此核对 2.1 秒执行链，隐私暴露也列入处置结果。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "disclosure", "value": "full" },
+      "effects": {
+        "metrics": [
+          { "key": "transparency", "delta": 14, "reason": "原始材料可用于外部独立复核" },
+          { "key": "trust", "delta": 8, "reason": "感知不确定性随原始材料一并公开" },
+          { "key": "legality", "delta": 4, "reason": "事故数据保全与调查移交已完成" }
+        ],
+        "tags": ["EDR 全量公开"]
+      }
+    },
+    {
+      "id": "a_rule_third_party",
+      "label": "第三方完成脱敏核验",
+      "description": "完整数据先交独立机构审查，公开版本经脱敏处理。调查记录保留原件审查和结论发布两个环节，公开时间相应延后。",
+      "kind": "positive",
+      "when": { "kind": "flag", "key": "disclosure", "value": "third" },
+      "effects": {
+        "metrics": [
+          { "key": "transparency", "delta": 11, "reason": "完整数据已进入独立审查流程" },
+          { "key": "trust", "delta": 7, "reason": "审查结论由独立机构核验" },
+          { "key": "legality", "delta": 5, "reason": "数据移交与脱敏遵循监管程序" }
+        ],
+        "tags": ["第三方脱敏"]
+      }
+    },
+    {
+      "id": "a_rule_selective_disclosure",
+      "label": "仅披露无故障片段",
+      "description": "数据条款仅发布有利于系统无故障结论的片段。感知低置信度、未选分支和完整时间线可能缺席，外部无法据此重建全部执行过程。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "disclosure", "value": "selective" },
+      "effects": {
+        "metrics": [
+          { "key": "transparency", "delta": -10, "reason": "公开清单缺少完整决策链材料" },
+          { "key": "trust", "delta": -6, "reason": "无故障结论缺少外部完整核验" },
+          { "key": "legality", "delta": -4, "reason": "调查配合材料未达到完整披露要求" }
+        ],
+        "tags": ["片段披露"]
+      }
+    },
+    {
+      "id": "a_rule_data_deletion",
+      "label": "事故原始数据被删除",
+      "description": "数据条款以商业秘密为由清除原始感知与决策日志。EDR 执行链失去原始材料支撑，事故重建和监管核查均受影响。",
+      "kind": "negative",
+      "when": { "kind": "flag", "key": "disclosure", "value": "delete" },
+      "effects": {
+        "metrics": [
+          { "key": "transparency", "delta": -18, "reason": "原始感知与决策记录已被清除" },
+          { "key": "legality", "delta": -12, "reason": "删除操作违反事故数据保全义务" },
+          { "key": "trust", "delta": -12, "reason": "数据删除削弱了后续核查基础" },
+          { "key": "ethics", "delta": -6, "reason": "责任核查缺少必要的原始记录" }
+        ],
+        "tags": ["原始数据删除"]
+      }
+    },
+    {
+      "id": "a_rule_inspect_sensor",
+      "label": "感知标定检查已记录",
+      "description": "出发前检查感知单元，并将雨幕标定与置信度问题写入检查记录。复盘可据此核对 78% 置信度是否触发相应策略。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "a_sensor" },
+      "effects": {
+        "metrics": [
+          { "key": "ethics", "delta": 3, "reason": "检查记录包含感知不确定性" },
+          { "key": "transparency", "delta": 2, "reason": "雨幕标定问题已进入测试档案" }
+        ],
+        "tags": ["感知标定检查"]
+      }
+    },
+    {
+      "id": "a_rule_inspect_crosswalk",
+      "label": "斑马线现场勘查完整",
+      "description": "检查记录覆盖斑马线视野与行人进入轨迹，可用于复核 42 米预警和三名儿童的运动方向。",
+      "kind": "positive",
+      "when": { "kind": "inspected", "id": "a_crosswalk" },
+      "effects": {
+        "metrics": [
+          { "key": "safety", "delta": 2, "reason": "行人轨迹有现场勘查记录佐证" },
+          { "key": "transparency", "delta": 2, "reason": "斑马线视野与轨迹已纳入现场档案" }
+        ],
+        "tags": ["斑马线勘查"]
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "a_out_governed",
+      "kicker": "REVIEW / 执行链可复核",
+      "title": "右避执行链可复核",
+      "description": "决策表把冲击交给了车辆与设施：右避分支在 2.1 秒窗口内触发，测试车以 46 km/h 擦上护栏，护栏变形、车头左侧受损，三名儿童没有被车身直接撞到。代价落在车内：后排乘员锁骨骨折。原始感知片段、决策日志和 EDR 时间戳按完整公开或第三方审查条款移交，复核方能顺着 78% 置信度一路查到转向指令。行人这一侧的伤害确实降了下来，乘员与道路设施的损伤另立整改项。",
+      "advice": "下一轮重测右避分支，核对触发时点、46 km/h 的碰撞速度和乘员伤情；一并复查雨幕标定和 78% 置信度的处理方式，验证结果写进下一版决策表。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_right" },
+          { "kind": "flag", "key": "disclosure", "op": "in", "value": ["full", "third"] }
+        ]
+      }
+    },
+    {
+      "id": "a_out_procedural",
+      "kicker": "REVIEW / 制动合规核查",
+      "title": "制动合规，碰撞仍发生",
+      "description": "决策表在本车道制动分支上执行：ABS 在末段介入，车辆在湿路面上拖出制动痕迹，最后停在斑马线中央。三名儿童被撞倒，其中一人重伤。合规这一项站得住：车辆没有越线，也没有驶入对向车道；材料齐全，EDR 时间戳可以直接核对制动点。问题落在停不住这一段：按当时的车速和 18.4 米湿地制动估计，本车道减速不足以在儿童通过前把车刹稳。",
+      "advice": "下次重点检查低置信度时的制动提前量，复测 18.4 米湿地制动估计；将“置信度增加 12%、制动提前 0.4 秒”的重建条件纳入回归测试，并修订触发条目。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "decision", "nodeId": "a_event", "optionId": "a_act_brake" },
+          { "kind": "flag", "key": "disclosure", "op": "in", "value": ["full", "third"] }
+        ]
+      }
+    },
+    {
+      "id": "a_out_opaque",
+      "kicker": "REVIEW / 披露材料不全",
+      "title": "2.1 秒执行链披露不全",
+      "description": "避险动作本身留下了记录：车辆按配置好的制动或右避分支执行，EDR 里有对应时间戳。缺的是外围材料。公开片段只保留无故障部分，或者原始感知与决策日志已经删除，想查 78% 置信度怎样进入分支条件、18.4 米湿地制动估计用在哪一步，手上没有可比对的东西。调查组能确认车辆做了什么，却没法在车外验证这个动作是否就是表里那一条规则的结果。",
+      "advice": "下次测试前将原始 EDR 保全设为必检项；公开清单需包含感知置信度、候选分支及制动或转向时点，脱敏后发布，删除原件的规则应移除。",
+      "when": {
+        "kind": "all",
+        "conditions": [
+          { "kind": "flag", "key": "disclosure", "op": "in", "value": ["selective", "delete"] },
+          { "kind": "decision", "nodeId": "a_event", "optionId": ["a_act_brake", "a_act_right"] }
+        ]
+      }
+    },
+    {
+      "id": "a_out_harm",
+      "kicker": "REVIEW / 越线与鸣笛分支",
+      "title": "高风险分支执行记录",
+      "description": "车辆走的是左避或巡航鸣笛两条分支之一。左避时越过中心线，与对向 31 米的 12 吨货车正面相撞，车内两人重伤，货车司机被卡在驾驶室；巡航鸣笛时以 51 km/h 通过斑马线，只靠 61% 的行人避让预测，没有减速。事故材料按所选披露条款处理，EDR 与调查记录都已归档。两条分支都没有减少总风险，只是把它转到对向车道的货车司机，或者斑马线上还没撤出的人。",
+      "advice": "下次分别审查左避的越线条件和巡航分支的行人预测条件：左避需重新评估对向 31 米货车，巡航需在 78% 感知置信度下测试主动制动，相关分支修改后再做回归。",
+      "when": { "kind": "decision", "nodeId": "a_event", "optionId": ["a_act_left", "a_act_horn"] }
+    },
+    {
+      "id": "a_out_open",
+      "kicker": "REVIEW / 待核对项",
+      "title": "执行链仍有待核对项",
+      "description": "动作、条款和后果都进了档案，但这一组的组合落不进前面几类结局。复盘要做的还是三项对照：决策表 1.0.0 的版本与实际触发的分支是否一致，EDR 时间戳能否和感知片段互相印证，调查组拿到的材料够不够支撑一次独立复核。这一轮没有覆盖到的条款，列进下一轮测试项目。",
+      "advice": "下次先检查本次未触发或未覆盖的规则，补齐低置信度、湿地制动和数据保全测试；每项修改注明对应日志与验证结果，再更新决策表版本。",
+      "fallback": true
+    }
+  ]
+}

@@ -1,0 +1,587 @@
+<!--高德地图-->
+<template>
+  <div class="space-detail-map">
+    
+    <div ref="mapSlot" class="map-container"></div>
+
+    <div v-if="loading" class="map-loading-overlay">
+      <div class="loading-spinner"></div>
+      <span class="loading-text">地图加载中...</span>
+    </div>
+
+    <MapToolbar
+      :basemap-type="basemapType"
+      :show-p-o-i="showPOI"
+      :show-markers="showMarkers"
+      :show-p-o-i-toggle="!isAdmin"
+      :show-marker-toggle="true"
+      :space-name="spaceData?.name"
+      :space-province="spaceData?.province"
+      :space-city="spaceData?.city"
+      :scene-count="sceneList.length"
+      :show-click-hint="isAdmin"
+      @switch-basemap="handleBasemapSwitch"
+      @toggle-p-o-i="handleTogglePOI"
+      @toggle-markers="handleToggleMarkers"
+      @back="goBack"
+    />
+
+
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Marker, Popup, Scene as L7Scene } from '@antv/l7'
+import MapToolbar from './MapToolbar.vue'
+import type { BasemapType } from '@/composables/useL7Scene'
+import type { SceneMarkerData } from '@/composables/useSceneMarkers'
+import SpaceApi from '@/apis/space.api'
+import { apiUrl } from '@/utils/apiBase'
+import type { SpaceDetailResponse } from '@/models/space.model'
+import * as mapManager from '@/services/mapManager.service'
+
+const TAG = '[SceneInSpace]'
+
+function logMem(label: string) {
+  const perf = (performance as any)
+  if (perf && perf.memory) {
+    const m = perf.memory
+    console.log(
+      `${TAG} [MEM] ${label} | used=${(m.usedJSHeapSize / 1048576).toFixed(1)}MB ` +
+      `total=${(m.totalJSHeapSize / 1048576).toFixed(1)}MB ` +
+      `limit=${(m.jsHeapSizeLimit / 1048576).toFixed(1)}MB`
+    )
+  } else {
+    console.log(`${TAG} [MEM] ${label} (performance.memory not available)`)
+  }
+}
+
+const props = defineProps<{
+  isAdmin?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'sceneClick', scene: SceneMarkerData): void
+}>()
+
+const router = useRouter()
+const route = useRoute()
+
+const mapSlot = ref<HTMLDivElement | null>(null)
+const loading = ref(true)
+const spaceData = ref<SpaceDetailResponse | null>(null)
+const sceneList = ref<SceneMarkerData[]>([])
+const basemapType = ref<BasemapType>('vector')
+const showPOI = ref(false)
+const showMarkers = ref(true)
+const activeSceneId = ref<number | null>(null)
+
+let localL7Scene: L7Scene | null = null
+let localAMapInstance: any = null
+let localNormalLayer: any = null
+let localSatelliteLayer: any = null
+let markerList: Marker[] = []
+
+const getPreviewUrl = (sceneCode: string) => {
+  return apiUrl(`/res/previews/${sceneCode}`)
+}
+
+function goBack() {
+  router.push({ name: 'home' })
+}
+
+async function loadSpaceData() {
+  const spaceId = Number(route.params.id)
+  if (!spaceId) {
+    console.error('No space ID provided')
+    return false
+  }
+
+  try {
+    loading.value = true
+    const result = await SpaceApi.getSpaceDetail(spaceId)
+    if (result.code === 200 && result.data) {
+      spaceData.value = result.data
+      sceneList.value = (result.data.scenes || []).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        longitude: s.longitude || 0,
+        latitude: s.latitude || 0,
+        thumbnail_url: s.scene_code ? getPreviewUrl(s.scene_code) : s.thumbnail_url,
+        scene_code: s.scene_code,
+        view_count: s.view_count,
+        hotspots: s.hotspots,
+      }))
+      console.log('Space data loaded:', spaceData.value?.name, 'with', sceneList.value.length, 'scenes')
+      return true
+    } else {
+      console.error('Failed to load space data:', result)
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to load space data:', error)
+    return false
+  }
+}
+
+const getMarkerColor = (index: number): string => {
+  const colors = ['#0F6E84', '#3E7FB8', '#2F9E68', '#D99A2B', '#4E9A8E', '#C4703A', '#D65B4A', '#6E8593']
+  return colors[index % colors.length]
+}
+
+const createMarkerElement = (scene: SceneMarkerData, index: number): HTMLDivElement => {
+  const el = document.createElement('div')
+  el.className = 'scene-marker-wrapper'
+  el.innerHTML = `
+    <div class="scene-marker" style="--marker-color: ${getMarkerColor(index)}">
+      <div class="marker-pin">
+        <svg width="28" height="38" viewBox="0 0 28 38">
+          <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.268 21.732 0 14 0z"
+                fill="var(--marker-color)" stroke="rgba(255,255,255,0.8)" stroke-width="1.5"/>
+          <circle cx="14" cy="14" r="6" fill="rgba(255,255,255,0.95)"/>
+          <circle cx="14" cy="14" r="3" fill="var(--marker-color)"/>
+        </svg>
+      </div>
+      <div class="marker-pulse"></div>
+    </div>
+    <div class="marker-label">${scene.title}</div>
+  `
+  return el
+}
+
+const createPopupContent = (scene: SceneMarkerData): string => {
+  return `
+    <div class="scene-popup">
+      <div class="popup-header">
+        <h3 class="popup-title">${scene.title}</h3>
+        <span class="popup-coords">${scene.longitude.toFixed(6)}, ${scene.latitude.toFixed(6)}</span>
+      </div>
+      ${scene.thumbnail_url ? `<div class="popup-thumbnail"><img src="${scene.thumbnail_url}" alt="${scene.title}" /></div>` : ''}
+      <div class="popup-info">
+        <div class="info-row">
+          <span class="info-label">场景 ID</span>
+          <span class="info-value">${scene.id}</span>
+        </div>
+        ${scene.hotspots && scene.hotspots.length > 0 ? `
+        <div class="info-row">
+          <span class="info-label">连接热点</span>
+          <span class="info-value">${scene.hotspots.length} 个</span>
+        </div>` : ''}
+        <div class="info-row">
+          <span class="info-label info-link" data-scene-id="${scene.id}">查看全景 →</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+const loadSceneMarkers = () => {
+  if (!localL7Scene) return
+
+  localL7Scene.removeAllMarkers()
+  markerList = []
+
+  sceneList.value.forEach((scene, index) => {
+    if (!scene.longitude || !scene.latitude) return
+
+    const el = createMarkerElement(scene, index)
+
+    const marker = new Marker({
+      element: el,
+      offsets: [-14, -38],
+      anchor: 'bottom-left' as any,
+    }).setLnglat([scene.longitude, scene.latitude] as any)
+
+    const popup = new Popup({
+      offsets: [0, -42],
+      closeButton: true,
+      maxWidth: '300px',
+      title: '',
+      html: createPopupContent(scene),
+    })
+    marker.setPopup(popup)
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation()
+      activeSceneId.value = scene.id
+      marker.togglePopup()
+      if (!props.isAdmin) {
+        emit('sceneClick', scene)
+      }
+    })
+
+    if (localL7Scene) {
+      localL7Scene.addMarker(marker)
+      markerList.push(marker)
+    }
+  })
+}
+
+function onMapReady() {
+  if (!localAMapInstance) return
+
+  logMem('AMap ready')
+
+  if (typeof localAMapInstance.setFeatures === 'function') {
+    localAMapInstance.setFeatures(['bg', 'road', 'building'])
+  }
+
+  loadSceneMarkers()
+  if (props.isAdmin) {
+    localL7Scene?.on('click', handleMapClick)
+  }
+  loading.value = false
+  logMem('onMapReady done')
+}
+
+function handleBasemapSwitch(type: BasemapType) {
+  basemapType.value = type
+
+  if (!localAMapInstance || !(window as any).AMap) {
+    console.warn('handleBasemapSwitch: aMapInstance or AMap not available')
+    return
+  }
+
+  const AMap = (window as any).AMap
+
+  if (type === 'satellite') {
+    if (localNormalLayer) {
+      localNormalLayer.hide()
+    }
+    if (!localSatelliteLayer) {
+      localSatelliteLayer = new AMap.TileLayer.Satellite()
+      localAMapInstance.add(localSatelliteLayer)
+      mapManager.setSatelliteLayer(localSatelliteLayer)
+    } else {
+      localSatelliteLayer.show()
+    }
+  } else {
+    if (localSatelliteLayer) {
+      localSatelliteLayer.hide()
+    }
+    if (localNormalLayer) {
+      localNormalLayer.show()
+    }
+    if (typeof localAMapInstance.setFeatures === 'function') {
+      localAMapInstance.setFeatures(showPOI.value ? ['bg', 'road', 'building', 'point'] : ['bg', 'road', 'building'])
+    }
+  }
+}
+
+function handleTogglePOI(show: boolean) {
+  showPOI.value = show
+  if (!localAMapInstance) return
+  if (show) {
+    localAMapInstance.setFeatures(['bg', 'road', 'building', 'point'])
+  } else {
+    localAMapInstance.setFeatures(['bg', 'road', 'building'])
+  }
+}
+
+function handleToggleMarkers(show: boolean) {
+  showMarkers.value = show
+  markerList.forEach(marker => {
+    if (show) marker.show()
+    else marker.hide()
+  })
+}
+
+function handleSceneClick(scene: SceneMarkerData) {
+  activeSceneId.value = scene.id
+  if (localAMapInstance) {
+    localAMapInstance.setZoomAndCenter(17, [scene.longitude, scene.latitude], false, 500)
+  }
+  const index = sceneList.value.findIndex(s => s.id === scene.id)
+  if (index >= 0 && markerList[index]) {
+    markerList[index].openPopup()
+  }
+  if (!props.isAdmin) {
+    emit('sceneClick', scene)
+  }
+}
+
+async function handleMapClick(e: any) {
+  if (e.target?.closest?.('.scene-marker-wrapper')) return
+
+  const { lng, lat } = e.lngLat
+  const newScene: SceneMarkerData = {
+    id: Date.now(),
+    title: `新场景节点`,
+    longitude: lng,
+    latitude: lat,
+    scene_code: `scene-${Date.now()}`,
+  }
+
+  sceneList.value.push(newScene)
+
+  const el = createMarkerElement(newScene, sceneList.value.length - 1)
+  const marker = new Marker({
+    element: el,
+    offsets: [-14, -38],
+    anchor: 'bottom-left' as any,
+  }).setLnglat([lng, lat] as any)
+
+  const popup = new Popup({
+    offsets: [0, -42],
+    closeButton: true,
+    maxWidth: '300px',
+    title: '',
+    html: createPopupContent(newScene),
+  })
+  marker.setPopup(popup)
+
+  el.addEventListener('click', (ev) => {
+    ev.stopPropagation()
+    activeSceneId.value = newScene.id
+    marker.togglePopup()
+  })
+
+  if (localL7Scene) {
+    localL7Scene.addMarker(marker)
+    markerList.push(marker)
+    marker.openPopup()
+  }
+}
+
+onMounted(async () => {
+  logMem('onMounted start')
+  const loaded = await loadSpaceData()
+  if (!loaded || !spaceData.value || !mapSlot.value) {
+    loading.value = false
+    return
+  }
+
+  const spaceId = Number(route.params.id)
+  const center: [number, number] = [
+    spaceData.value.longitude || 116.4074,
+    spaceData.value.latitude || 39.9042,
+  ]
+
+  try {
+    const handle = await mapManager.acquire(mapSlot.value, spaceId, center, 15)
+    localL7Scene = handle.l7Scene
+    localAMapInstance = handle.aMapInstance
+    localNormalLayer = handle.normalLayer
+    localSatelliteLayer = handle.satelliteLayer
+
+    logMem(`mapManager.acquire done (new=${handle.isNewInstance}, changed=${handle.isSpaceChanged})`)
+
+    if (handle.isNewInstance) {
+      onMapReady()
+    } else if (handle.isSpaceChanged) {
+      if (typeof localAMapInstance.setFeatures === 'function') {
+        localAMapInstance.setFeatures(showPOI.value ? ['bg', 'road', 'building', 'point'] : ['bg', 'road', 'building'])
+      }
+      loadSceneMarkers()
+      if (props.isAdmin) {
+        localL7Scene?.on('click', handleMapClick)
+      }
+      loading.value = false
+    } else {
+      if (props.isAdmin) {
+        localL7Scene?.on('click', handleMapClick)
+      }
+      loadSceneMarkers()
+      loading.value = false
+    }
+  } catch (error) {
+    console.error('Failed to acquire map:', error)
+    loading.value = false
+  }
+})
+
+onBeforeUnmount(() => {
+  console.log(`${TAG} onBeforeUnmount`)
+
+  if (localL7Scene && props.isAdmin) {
+    localL7Scene.off('click', handleMapClick)
+  }
+
+  if (localL7Scene) {
+    localL7Scene.removeAllMarkers()
+  }
+  markerList = []
+
+  mapManager.release()
+
+  localL7Scene = null
+  localAMapInstance = null
+  localNormalLayer = null
+  localSatelliteLayer = null
+  spaceData.value = null
+  sceneList.value = []
+
+  logMem('onBeforeUnmount done')
+})
+</script>
+
+<style scoped>
+.space-detail-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--rl-bg-alt);
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 247, 249, 0.78);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+  gap: 12px;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(15, 110, 132, 0.18);
+  border-top-color: var(--rl-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 13px;
+  color: var(--rl-muted);
+}
+
+
+</style>
+
+<style>
+.scene-marker-wrapper {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.scene-marker {
+  position: relative;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+}
+
+.scene-marker-wrapper:hover .scene-marker {
+  transform: scale(1.1) translateY(-2px);
+}
+
+.marker-pulse {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 4px;
+  background: rgba(20, 36, 46, 0.18);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+.marker-label {
+  margin-top: 2px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--rl-border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Noto Sans SC', sans-serif;
+  color: var(--rl-ink);
+  white-space: nowrap;
+  font-weight: 500;
+  box-shadow: var(--rl-sh-sm);
+}
+
+.scene-popup {
+  min-width: 240px;
+  max-width: 300px;
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rl-border);
+}
+
+.popup-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rl-ink);
+  margin: 0;
+}
+
+.popup-coords {
+  font-size: 10px;
+  color: var(--rl-faint);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+}
+
+.popup-thumbnail {
+  width: 100%;
+  height: 110px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.popup-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.popup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--rl-muted);
+}
+
+.info-value {
+  font-size: 12px;
+  color: var(--rl-ink);
+  font-weight: 500;
+}
+
+.info-link {
+  color: var(--rl-primary);
+  cursor: pointer;
+}
+
+.info-link:hover {
+  text-decoration: underline;
+}
+</style>
