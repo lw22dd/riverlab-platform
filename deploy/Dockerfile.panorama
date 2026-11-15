@@ -12,13 +12,15 @@ COPY panorama/ ./
 
 # 默认留空，走同源 /api/v1；仅在需要直连独立源站时通过构建参数覆盖
 ARG VITE_API_BASE_URL=
-ARG VITE_AMAP_KEY=
-ARG VITE_AMAP_SECURITY_KEY=
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ENV VITE_AMAP_KEY=${VITE_AMAP_KEY}
-ENV VITE_AMAP_SECURITY_KEY=${VITE_AMAP_SECURITY_KEY}
 
-RUN npm run build
+# 高德 Key 使用独立参数名，空值时不会覆盖 panorama/.env 中的本地配置
+ARG AMAP_KEY_ARG=
+ARG AMAP_SECRET_ARG=
+
+RUN if [ -n "$AMAP_KEY_ARG" ]; then export VITE_AMAP_KEY="$AMAP_KEY_ARG"; fi; \
+    if [ -n "$AMAP_SECRET_ARG" ]; then export VITE_AMAP_SECURITY_KEY="$AMAP_SECRET_ARG"; fi; \
+    npm run build
 
 FROM nginx:alpine
 

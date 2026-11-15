@@ -118,8 +118,8 @@ services:
       dockerfile: deploy/Dockerfile.panorama
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-        VITE_AMAP_SECURITY_KEY: ${VITE_AMAP_SECURITY_KEY:-}
+        AMAP_KEY_ARG: ${VITE_AMAP_KEY:-}
+        AMAP_SECRET_ARG: ${VITE_AMAP_SECURITY_KEY:-}
     restart: unless-stopped
     expose:
       - "80"
