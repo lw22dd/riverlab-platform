@@ -313,7 +313,9 @@ export function buildAutonomousScene(
     mark.position.set(x, 0.023, 11.4)
     skidGroup.add(mark)
   }
-  ego.add(skidGroup)
+  // 刹车痕必须留在路面上，而不是跟着车走；挂在 ego 下会让整段痕迹随车平移。
+  skidGroup.position.set(egoHome.x, 0, 0)
+  stage.scene.add(skidGroup)
 
   // 传感器轨迹线，在「感知告警」节点显示。
   const trajectoryGroup = new THREE.Group()

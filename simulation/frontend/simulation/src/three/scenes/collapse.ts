@@ -329,6 +329,27 @@ export function buildCollapseScene(
   net.position.set(0, 8.4, -1.95)
   stage.scene.add(net)
 
+  // 坍塌后的废墟堆：让体块落地后仍有“碎掉”的尺度，而不是干净的长方体。
+  const rubbleGroup = new THREE.Group()
+  const rubbleMaterial = new THREE.MeshStandardMaterial({ color: 0xa39a8b, roughness: 0.98, flatShading: true })
+  const rubbleRandom = mulberry32(77)
+  for (let index = 0; index < 18; index += 1) {
+    const size = 0.35 + rubbleRandom() * 0.95
+    const chunk = new THREE.Mesh(new THREE.DodecahedronGeometry(size, 0), rubbleMaterial)
+    chunk.position.set(
+      (rubbleRandom() - 0.5) * 19,
+      0.18 + rubbleRandom() * 1.2,
+      -8 + (rubbleRandom() - 0.5) * 14,
+    )
+    chunk.rotation.set(rubbleRandom() * 2, rubbleRandom() * 2, rubbleRandom() * 2)
+    chunk.castShadow = true
+    chunk.receiveShadow = true
+    chunk.scale.setScalar(0.001)
+    rubbleGroup.add(chunk)
+  }
+  rubbleGroup.visible = false
+  stage.scene.add(rubbleGroup)
+
   // 东侧立面的裂缝
   const crackPoints: number[] = []
   const randomCrack = mulberry32(66)
@@ -846,12 +867,14 @@ export function buildCollapseScene(
     const fallingRandom = mulberry32(202)
     buildingPieces.forEach((piece, index) => {
       const direction = piece.home.x >= 0 ? 1 : -1
+      const floor = Math.min(6, Math.floor(index / 3))
+      const delay = floor * 0.12 + (index % 3) * 0.04
       tw(piece.mesh.position, {
         x: piece.home.x + direction * (1.6 + fallingRandom() * 4.8),
         y: 0.35 + fallingRandom() * 2.2,
         z: piece.home.z + (fallingRandom() - 0.5) * 5.6,
         duration: 1.5 + fallingRandom() * 0.9,
-        delay: index * 0.028,
+        delay,
         ease: 'power2.in',
       })
       tw(piece.mesh.rotation, {
@@ -859,13 +882,25 @@ export function buildCollapseScene(
         y: (fallingRandom() - 0.5) * 0.55,
         z: (fallingRandom() - 0.5) * 0.7,
         duration: 1.8 + fallingRandom() * 0.7,
-        delay: index * 0.028,
+        delay,
         ease: 'power2.in',
       })
     })
     tw(buildingScaffold.rotation, { x: -0.35, z: 0.22, duration: 1.6, ease: 'power2.in' })
     tw(buildingScaffold.position, { y: -3.2, z: 1.8, duration: 1.8, ease: 'power2.in' })
     tw(netMaterial, { opacity: 0, duration: 0.8 })
+    rubbleGroup.visible = true
+    rubbleGroup.children.forEach((chunk, index) => {
+      chunk.scale.setScalar(0.001)
+      tw(chunk.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.55,
+        delay: 1.15 + index * 0.025,
+        ease: 'back.out(1.7)',
+      })
+    })
     later(1900, () => {
       buildingScaffold.visible = false
       net.visible = false
@@ -1025,6 +1060,8 @@ export function buildCollapseScene(
     net.visible = true
     netMaterial.opacity = 0.18
     cracks.visible = true
+    rubbleGroup.visible = false
+    for (const chunk of rubbleGroup.children) chunk.scale.setScalar(0.001)
     dust.visible = false
     dustMaterial.opacity = 0
     emergencyGroup.visible = false

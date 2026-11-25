@@ -15,7 +15,7 @@ type TweenTarget = Parameters<Stage['tweenTo']>[0]
 type TweenVars = Parameters<Stage['tweenTo']>[1]
 
 const DECK_TOP = 4.55
-const STOP_Z = 9.35
+const STOP_Z = 7.55
 const WORKER_Z = [-2.6, -4.5, -6.4, -8.3, -10.2]
 
 const CAMERA_PRESETS: Record<string, CameraPreset> = {
@@ -252,7 +252,7 @@ export function buildFootbridgeScene(
   )
 
   const trolley = createTrolley()
-  const trolleyState = { progress: 0 }
+  const trolleyState = { progress: 0, lastProgress: 0 }
   stage.scene.add(trolley)
 
   /** 按进度把电车放到轨道上，并让车头朝向切线方向。 */
@@ -261,6 +261,12 @@ export function buildFootbridgeScene(
     const tangent = trolleyRoute.getTangentAt(progress)
     trolley.position.set(point.x, 0.02, point.z)
     trolley.rotation.y = Math.atan2(-tangent.x, -tangent.z)
+    const wheels = trolley.userData.wheels as THREE.Mesh[] | undefined
+    if (wheels) {
+      const delta = Math.max(0, progress - trolleyState.lastProgress)
+      for (const wheel of wheels) wheel.rotation.x += delta * 28
+    }
+    trolleyState.lastProgress = progress
   }
 
   /** 把世界坐标 z 换算成轨道进度，方便按「撞击点」定位电车。 */

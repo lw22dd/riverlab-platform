@@ -93,6 +93,7 @@ export function createTrolley(): THREE.Group {
 
   const wheelGeometry = new THREE.CylinderGeometry(0.42, 0.42, 0.2, 16)
   const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x4b4f52, roughness: 0.9 })
+  const wheels: THREE.Mesh[] = []
   for (const x of [-1.1, 1.1]) {
     for (const z of [-2.1, 0.2, 2.2]) {
       const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial)
@@ -100,10 +101,11 @@ export function createTrolley(): THREE.Group {
       wheel.position.set(x, 0.43, z)
       wheel.castShadow = true
       group.add(wheel)
+      wheels.push(wheel)
     }
   }
 
-  group.userData = { kind: 'trolley' }
+  group.userData = { kind: 'trolley', wheels }
   return group
 }
 
@@ -420,7 +422,7 @@ export function buildTrolleyScene(
   // ---------------------------------------------------------------------------
 
   const trolley = createTrolley()
-  const trolleyState = { progress: 0 }
+  const trolleyState = { progress: 0, lastProgress: 0 }
   const initialPoint = mainRoute.getPointAt(0)
   trolley.position.copy(initialPoint)
   const initialTangent = mainRoute.getTangentAt(0)
@@ -433,6 +435,27 @@ export function buildTrolleyScene(
     const tangent = route.getTangentAt(progress)
     trolley.position.set(point.x, 0.02, point.z)
     trolley.rotation.y = Math.atan2(-tangent.x, -tangent.z)
+    const wheels = trolley.userData.wheels as THREE.Mesh[] | undefined
+    if (wheels) {
+      const delta = Math.max(0, progress - trolleyState.lastProgress)
+      for (const wheel of wheels) wheel.rotation.x += delta * 28
+    }
+    trolleyState.lastProgress = progress
+  }
+
+  /** 把世界坐标 z 换算成轨道进度，让撞击在车头真正到达工人时发生。 */
+  function progressAtZ(route: THREE.CatmullRomCurve3, z: number): number {
+    let best = 0
+    let bestDelta = Number.POSITIVE_INFINITY
+    for (let index = 0; index <= 260; index += 1) {
+      const t = index / 260
+      const delta = Math.abs(route.getPointAt(t).z - z)
+      if (delta < bestDelta) {
+        bestDelta = delta
+        best = t
+      }
+    }
+    return best
   }
 
   const lever = new THREE.Group()
@@ -575,13 +598,16 @@ export function buildTrolleyScene(
   // 沿指定曲线推进电车；side 决定最终停在主线还是侧线。
   function runTrolley(route: THREE.CatmullRomCurve3, side: boolean): void {
     trolleyState.progress = 0
+    const duration = 4.4
+    // 车头在车心前方约 3.05m；让车头到达第一组工人/侧线工人时触发撞击。
+    const impactProgress = progressAtZ(route, side ? -9.35 : -10.5)
     tw(trolleyState, {
       progress: 1,
-      duration: 4.4,
+      duration,
       ease: 'none',
       onUpdate: () => placeTrolley(route, trolleyState.progress),
     })
-    later(side ? 3800 : 2700, () => {
+    later(Math.max(600, impactProgress * duration * 1000), () => {
       if (side) impactSide()
       else impactMain()
     })

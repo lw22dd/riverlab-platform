@@ -97,7 +97,7 @@ export class Stage {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = DEFAULT_AMBIENCE.exposure ?? 1.05
     this.renderer.shadowMap.enabled = true
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.shadowMap.type = THREE.PCFShadowMap
     this.renderer.domElement.className = 'stage-canvas'
     host.appendChild(this.renderer.domElement)
 
@@ -342,9 +342,15 @@ export class Stage {
     for (const object of this.hotspotObjects.values()) object.visible = true
   }
 
-  /** 暂停/恢复逐帧更新（不停止渲染），配合运行页的暂停面板。 */
+  /** 暂停/恢复逐帧更新（不停止渲染），并冻结 GSAP 补间与延时回调。 */
   setPaused(paused: boolean): void {
+    if (this.paused === paused) return
     this.paused = paused
+    if (paused) {
+      gsap.globalTimeline.pause()
+    } else {
+      gsap.globalTimeline.resume()
+    }
     this.lastFrame = performance.now()
   }
 
@@ -393,6 +399,10 @@ export class Stage {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    if (this.paused) {
+      this.paused = false
+      gsap.globalTimeline.resume()
+    }
     cancelAnimationFrame(this.frame)
     this.resizeObserver?.disconnect()
     for (const tween of this.tweens) tween.kill()
