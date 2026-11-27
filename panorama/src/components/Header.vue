@@ -1,8 +1,22 @@
 <template>
   <header class="header">
     <div class="header-content">
-      <div class="logo-section" @click="router.push('/')">
-        <h1 class="logo">全景漫游平台</h1>
+      <div class="header-brand">
+        <button
+          type="button"
+          class="back-home"
+          title="返回仿真实验平台首页"
+          @click="openSimulationHome"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+          </svg>
+          <span>返回仿真首页</span>
+        </button>
+        <div class="logo-section" @click="router.push('/')">
+          <h1 class="logo">全景漫游平台</h1>
+        </div>
       </div>
 
       <nav class="nav-menu">
@@ -174,6 +188,7 @@ import {
 import UserApi from '@/apis/user.api'
 import { useUserStore } from '@/stores/user.store'
 import { useFavoriteStore } from '@/stores/favorite.store'
+import { openSimulationHome } from '@/utils/simulationHome'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -325,6 +340,48 @@ const handleLogout = async () => {
   justify-content: space-between;
   height: 100%;
   gap: 32px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--rl-border-strong);
+  border-radius: 999px;
+  background: var(--rl-surface);
+  color: var(--rl-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.25s, border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+
+.back-home svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.back-home:hover {
+  background: var(--rl-primary-soft);
+  border-color: var(--rl-primary);
+  color: var(--rl-primary);
+  box-shadow: 0 4px 12px rgba(15, 110, 132, 0.16);
+}
+
+.back-home:focus-visible {
+  outline: 2px solid var(--rl-primary);
+  outline-offset: 2px;
 }
 
 .logo-section {
@@ -501,5 +558,77 @@ const handleLogout = async () => {
 :deep(.t-dropdown-item:hover) {
   background: var(--rl-primary-soft);
   color: var(--rl-primary);
+}
+
+@media (max-width: 900px) {
+  .header-content {
+    padding: 0 20px;
+    gap: 16px;
+  }
+
+  .header-brand {
+    gap: 10px;
+  }
+
+  .back-home {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .back-home span {
+    display: none;
+  }
+}
+
+/* 手机宽度：左上有返回键 + 品牌，右侧是导航和账号，必须压到一屏内 */
+@media (max-width: 560px) {
+  .header-content {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .header-brand {
+    gap: 8px;
+  }
+
+  .logo {
+    font-size: 17px;
+  }
+
+  .nav-menu {
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    font-size: 13px;
+    padding: 6px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* 窄屏只留文字，避免三个导航项被挤到换行/裁切 */
+  .nav-item :deep(svg) {
+    display: none;
+  }
+
+  .auth-section {
+    gap: 8px;
+  }
+
+  .user-info {
+    padding: 3px;
+  }
+
+  .user-name {
+    display: none;
+  }
 }
 </style>

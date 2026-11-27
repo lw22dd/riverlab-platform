@@ -37,22 +37,38 @@ npm test
 | `/assessment` | `PortalSectionView` | 本地推演记录、评估说明与反馈表单 |
 | `/contact` | `PortalSectionView` | 教学合作、问题反馈与联系表单 |
 | `/login` | `LoginView` | 登录/注册演示页（账号服务未接入） |
+| `/chronicle/dujiangyan` | `ChronicleView` | 都江堰三维营造纪事：八幕建造动画、分支实验、建模提单 |
 | `/scenario/:id` | `ScenarioView` | 3D 实验运行页、决策、HUD、图谱、日志 |
 | `/result/:sessionId` | `ResultView` | 单次会话报告、雷达图、规则审计、导出 |
 
 场景 id：`autonomous-driving`、`trolley-problem`、`trolley-footbridge`、`building-collapse`、`dujiangyan-build`。
 
-门户页面通过路由 `meta.portal` 使用深色外壳；`/scenario/:id` 仍为沉浸式运行页，`/result/:sessionId` 保持原有浅色报告样式。
+门户页面通过路由 `meta.portal` 使用深色外壳；`/chronicle/dujiangyan` 与 `/scenario/:id` 为沉浸式页面，`/result/:sessionId` 保持原有浅色报告样式。
 
-## 都江堰：开山导江记（`dujiangyan-build`）
+## 都江堰：开山导江记
 
-入口：`/experiments/dujiangyan` → “建造过程仿真”（主题页中的可运行变式），或直接访问 `/scenario/dujiangyan-build`。
+同一套低模三维建造引擎，两种用法：
 
-- **角色引导**：旁白、李冰、李二郎、老匠、乡民轮流讲述；李冰父子在关键工序前给出判断提示，工匠与乡民承担施工与生活视角。
-- **建造动画**：岷江在玉垒山前拐出弯道；都江堰尚未建成时只有一条天然河道，鱼嘴筑成后才分出内江、外江。玉垒山火烧水激开凿宝瓶口，凿通后内江水分成左、中、右三条干渠穿过成都平原；随后竹笼卵石逐笼沉江筑鱼嘴、低作飞沙堰溢流排沙、杩槎截流与凤栖窝深淘滩。每段动画由节点上的 `stage` effect 驱动，可在 `three/scenes/dujiangyan.ts` 中单独调整。
-- **交互**：六次决策（治水方略、开凿工艺、堤坝材料、四六分水、堰顶高度、岁修制度）；三处可点击的踏勘点；枯水/丰水与堰顶高度会即时改变水面、分流标签与溢流状态。
+- **运行页** `/scenario/dujiangyan-build`（从主题页「建造过程仿真」场景卡进入）：决策推演。三维舞台就是这一套纪事引擎，节点上的 `focus` / `stage` / `ambience` 由 `three/scenes/dujiangyan-chronicle.ts` 翻译成时间轴窗口与分支向量，六次决策会即时改变水面、分流比、溢流量与堰顶溢流。
+- **纪事页** `/chronicle/dujiangyan`：自由观看，直接访问地址（主题页不挂入口卡）。八幕共 64 秒逐段播放，可跳幕、拖时间轴、换机位、开「方案实验」改六项工法与「建模提单」看部件提单。
+
+引擎分层（`src/three/chronicle/`）：
+
+| 模块 | 职责 |
+| --- | --- |
+| `spec.ts` | 反演规格单一真源：`PROFILE_TABLE`、`DIKE_AXIS`、`WEIR_AXIS`、`GAP`、`SANDBARS`、`CANALS`、`PRESETS`、8 幕 `PHASES`、24 条屏幕标签 |
+| `terrain.ts` | 解析式高程 `sampleTerrain(X,Z,opt)`：河床 / 西岸 / 玉垒山脊 / 宝瓶口倒梯形开挖 / 成都平原与渠槽，八个地貌分区 |
+| `hydraulics.ts` | 水理解析式：六项分流、宽顶堰溢流、排沙效率、抗冲比、淘滩过流能力 |
+| `experiments.ts` | 四张答辩面板：分水比、溢流量、抗冲裕度、岁修淘滩 |
+| `scene.ts` | 三维世界：地形、连续水体 shader、玉垒山嘴与可剥离岩塞、竹笼 / 金刚堤 / 飞沙堰 / 人字堤 / 杩槎 / 石人水则、四级渠网与田块、粒子、标签、每帧求解 |
+| `dujiangyan-chronicle-map.ts` | 场景动作名 → 时间窗与分支的映射（纯函数，可单测） |
+
+- **建造动画**：岷江在玉垒山前拐出弯道；未建堰时只有一条天然河道，鱼嘴筑成后才分出内江、外江。火烧水激开凿宝瓶口，凿通后内江水分成左、中、右三条干渠穿过成都平原；随后竹笼卵石逐笼沉江筑鱼嘴、低作飞沙堰溢流排沙、杩槎截流与凤栖窝深淘滩。
+- **交互**：纪事页六项工法任改（开凿工艺 / 堤身材料 / 鱼嘴落位 / 堰顶高程 / 岁修淘滩 / 水情）；运行页六次决策对应同一批参数，另有三处可点击的踏勘热点（玉垒山嘴、内江弯道、平原引水口）。
 - **评分指标**：治水判断、实地踏勘、施工担当、工程配合、岁修传承；结局按得分分为“主体工程配合得当”“工程已成，仍有处置需修正”“先补救挡水与维护上的疏漏”。
 - **史料依据**：《史记·河渠书》《华阳国志·蜀志》、都江堰治水六字诀与《治水三字经》：“火烧水激”为传统工艺记载，具体尺寸与比例随水文年份变化；人物对白为教学化演绎。
+
+移植与建模说明见 `docs/dujiangyan/chronicle.md`。
 
 ## 目录与分层
 
@@ -94,15 +110,18 @@ src/
 ├─ stores/experiments.store.ts # 门户主题目录的加载与筛选状态
 ├─ styles/global.css
 ├─ styles/portal.css           # 深色门户设计令牌与共享组件样式
+├─ styles/chronicle-labels.css # 三维场景屏幕标签（纪事页与运行页共用）
 ├─ three/
 │  ├─ stage.ts                 # 渲染器、机位、氛围预设、CSS2D 热点、清理
 │  ├─ primitives.ts            # 程序化建筑 / 车辆 / 人物 / 轨道 / 雨 / 护栏…
-│  └─ scenes/                  # 五个场景的实体、动画、机位与交互（含 dujiangyan.ts 建造动画）
+│  ├─ chronicle/               # 都江堰纪事引擎：规格 / 地形 / 水理 / 实验 / 三维世界
+│  └─ scenes/                  # 各场景舞台构建器（dujiangyan-chronicle.ts 为纪事适配器）
 ├─ utils/format.ts             # 时长与时间格式化
 └─ views/
    ├─ home/HomeView.vue
    ├─ experiments/              # ExperimentCenterView / ThemeDetailView
    ├─ portal/                   # PortalSectionView / LoginView
+   ├─ chronicle/ChronicleView.vue
    ├─ scenario/ScenarioView.vue
    └─ result/ResultView.vue
 ```

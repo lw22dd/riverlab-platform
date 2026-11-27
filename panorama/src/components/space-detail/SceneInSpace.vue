@@ -24,6 +24,7 @@
       @toggle-p-o-i="handleTogglePOI"
       @toggle-markers="handleToggleMarkers"
       @back="goBack"
+      @home="goSimulationHome"
     />
 
 
@@ -39,6 +40,7 @@ import type { BasemapType } from '@/composables/useL7Scene'
 import type { SceneMarkerData } from '@/composables/useSceneMarkers'
 import SpaceApi from '@/apis/space.api'
 import { apiUrl } from '@/utils/apiBase'
+import { openSimulationHome } from '@/utils/simulationHome'
 import type { SpaceDetailResponse } from '@/models/space.model'
 import * as mapManager from '@/services/mapManager.service'
 
@@ -90,6 +92,11 @@ const getPreviewUrl = (sceneCode: string) => {
 
 function goBack() {
   router.push({ name: 'home' })
+}
+
+/** 离开全景，回到仿真实验平台首页。 */
+function goSimulationHome() {
+  openSimulationHome()
 }
 
 async function loadSpaceData() {

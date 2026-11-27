@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Header from '@/components/Header.vue'
 import ChinaMap from '@/components/ChinaMap.vue'
@@ -166,7 +166,10 @@ const loadSpaceList = async () => {
       if (targetSlug) {
         const target = spaceList.value.find((space) => space.slug === targetSlug)
         if (target) {
-          router.replace({ name: 'spaceDetail', params: { id: target.id } })
+          // 从仿真系统带 ?space=<slug> 进来时，先落在中国地图总览上，
+          // 把对应景区在地图上定位/高亮，由用户再点标记进入高德景区页。
+          await nextTick()
+          chinaMapRef.value?.focusSpace(target.id)
         }
       }
     }

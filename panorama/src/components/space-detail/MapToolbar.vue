@@ -2,13 +2,22 @@
 <template>
   <div class="map-toolbar-container">
     <div class="map-toolbar">
-      <button class="back-btn" @click="$emit('back')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5"/>
-          <path d="M12 19l-7-7 7-7"/>
-        </svg>
-        返回总览
-      </button>
+      <div class="toolbar-left">
+        <button class="back-btn" @click="$emit('back')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5"/>
+            <path d="M12 19l-7-7 7-7"/>
+          </svg>
+          返回总览
+        </button>
+        <button class="back-btn home-btn" title="返回仿真实验平台首页" @click="$emit('home')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10.5 12 3l9 7.5"/>
+            <path d="M5.5 9.5V21h13V9.5"/>
+          </svg>
+          返回仿真首页
+        </button>
+      </div>
 
       <div class="space-info-bar">
         <div class="space-info">
@@ -115,6 +124,7 @@ defineEmits<{
   (e: 'togglePOI', show: boolean): void
   (e: 'toggleMarkers', show: boolean): void
   (e: 'back'): void
+  (e: 'home'): void
 }>()
 </script>
 
@@ -158,6 +168,19 @@ defineEmits<{
   transition: all 0.2s;
   flex-shrink: 0;
   box-shadow: var(--rl-sh-sm);
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.home-btn {
+  font-size: 13px;
+  color: var(--rl-body);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .back-btn:hover {

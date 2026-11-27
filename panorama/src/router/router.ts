@@ -17,7 +17,8 @@ import PanoramaViewer from '@/components/PanoramaViewer.vue'
 import SpaceDetail from '@/views/SpaceDetail.vue'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', redirect: '/index' },
+  // 保留 query，仿真侧旧的 /panorama/?space=<slug> 入口仍能把目标景区带进首页。
+  { path: '/', redirect: (to) => ({ name: 'home', query: to.query }) },
   { path: '/index', component: index, name: 'home', meta: { requiresAuth: true } },
   {
     path: '/login',

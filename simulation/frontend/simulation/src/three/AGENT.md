@@ -2,12 +2,18 @@
 
 <summary>Three — 3D 舞台与场景建模层</summary>
 
-本目录存放 Three.js 表现层：共享舞台、程序化几何体工厂，以及五个场景（含都江堰建造动画）的实体、动画、机位与交互。
+本目录存放 Three.js 表现层：共享舞台、程序化几何体工厂，以及各场景（含都江堰建造动画）的实体、动画、机位与交互。
 
 ## 目录结构
 
 * [stage.ts](stage.ts) —— `Stage`：渲染器、相机、灯光、氛围预设、CSS2D 热点、GSAP 补间与清理
 * [primitives.ts](primitives.ts) —— 程序化几何体工厂（建筑、道路、车辆、人物、轨道、雨、护栏等）
+* [chronicle/](chronicle/) —— 都江堰「开山导江记」纪事引擎（纪事页与运行页共用）
+    * [spec.ts](chronicle/spec.ts) —— 反演规格单一真源：断面表、堤轴线、宝瓶口走廊、八幕时间轴、屏幕标签
+    * [terrain.ts](chronicle/terrain.ts) —— 解析式高程 `sampleTerrain`（河床 / 西岸 / 玉垒山脊 / 缺口开挖 / 平原渠槽）
+    * [hydraulics.ts](chronicle/hydraulics.ts) —— 六项分流、宽顶堰溢流、排沙效率、抗冲比、淘滩过流
+    * [experiments.ts](chronicle/experiments.ts) —— 四张答辩面板的采样与刻度
+    * [scene.ts](chronicle/scene.ts) —— 三维世界（地形、连续水体 shader、岩塞、竹笼/金刚堤/飞沙堰/杩槎、渠网田块、粒子、标签）
 * [scenes/](scenes/) —— 场景构建与舞台句柄
     * [index.ts](scenes/index.ts) —— `buildScenarioScene` 按 `DomainKind` 分发
     * [types.ts](scenes/types.ts) —— `ScenarioSceneOptions`、`ScenarioStageHandle`、`CameraPreset`
@@ -15,7 +21,9 @@
     * [trolley.ts](scenes/trolley.ts) —— 电车悖论：轨道、道岔、电车与撞击
     * [footbridge.ts](scenes/footbridge.ts) —— 天桥推人：天桥、护栏与坠落
     * [collapse.ts](scenes/collapse.ts) —— 大楼倒塌：基坑、脚手架、污水与坍塌
-        * [dujiangyan.ts](scenes/dujiangyan.ts) —— 都江堰建造实录：玉垒山缺口、宝瓶口开凿、竹笼鱼嘴、飞沙堰溢流与岁修淘滩；河床抛物线横断面（内江深窄、外江宽浅加高）+ 水面按床高裁剪实现四六分水，泥沙粒子按 8:2 分江、离堆回流与飞沙堰二次排沙，凤栖窝淤积随水文与堰高增长；由 `dujiangyan:*` 动作驱动
+    * [dujiangyan-chronicle.ts](scenes/dujiangyan-chronicle.ts) —— 都江堰运行页舞台：把纪事引擎包成 `ScenarioStageHandle`，自带 rAF 与 CSS2D 热点层
+    * [dujiangyan-chronicle-map.ts](scenes/dujiangyan-chronicle-map.ts) —— `dujiangyan:*` 动作 → 纪元时间窗与分支（纯函数，可单测）
+    * [dujiangyan.ts](scenes/dujiangyan.ts) —— v1 沙盘（已从分发点摘除，保留作对照）
 
 # 数据流
 

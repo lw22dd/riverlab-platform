@@ -1,7 +1,7 @@
 import type { DomainKind } from '@/models/scenario.model'
 import { buildAutonomousScene } from './autonomous'
 import { buildCollapseScene } from './collapse'
-import { buildDujiangyanScene } from './dujiangyan'
+import { buildChronicleStage } from './dujiangyan-chronicle'
 import { buildFootbridgeScene } from './footbridge'
 import { buildTrolleyScene } from './trolley'
 import type { ScenarioSceneOptions, ScenarioStageHandle } from './types'
@@ -22,7 +22,7 @@ export function buildScenarioScene(
     case 'collapse':
       return buildCollapseScene(host, options)
     case 'dujiangyan':
-      return buildDujiangyanScene(host, options)
+      return buildChronicleStage(host, options)
     default:
       throw new Error(`未注册的场景舞台：${String(domain)}`)
   }

@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { title: '实验详情', portal: true },
     },
     {
+      path: '/chronicle/dujiangyan',
+      name: 'chronicle-dujiangyan',
+      component: () => import('@/views/chronicle/ChronicleView.vue'),
+      meta: { title: '都江堰：开山导江记', immersive: true },
+    },
+    {
       path: '/scenario/:id',
       name: 'scenario',
       component: () => import('@/views/scenario/ScenarioView.vue'),

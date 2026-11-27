@@ -1,0 +1,101 @@
+/* 开山导江记：三维场景注入的屏幕标签与勘查热点。
+   这两组元素由 scene.ts / 场景适配器用 createElement 生成，不属于任何组件模板，
+   所以样式只能放在全局层，页面里用容器类名（.scene-labels / .scene-hotspots）挂载。 */
+
+.scene-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.scene-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--rl-ink) 22%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--rl-surface) 86%, transparent);
+  font-size: 12px;
+  line-height: 1.25;
+  letter-spacing: 0.05em;
+  color: var(--rl-ink);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  backdrop-filter: blur(4px);
+  will-change: transform, opacity;
+}
+
+.scene-label i {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rl-accent);
+}
+
+.scene-label b {
+  margin-left: 2px;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--rl-accent);
+}
+
+.scene-label.tier-1 {
+  font-weight: 600;
+}
+
+.scene-label.tier-1 i {
+  background: var(--rl-primary);
+}
+
+.scene-label.tier-2 {
+  border-color: color-mix(in srgb, var(--rl-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--rl-surface) 93%, transparent);
+}
+
+.scene-label.tier-3 {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--rl-surface) 74%, transparent);
+  font-size: 11px;
+  color: var(--rl-muted);
+}
+
+.scene-label.tier-3 i {
+  width: 4px;
+  height: 4px;
+  background: var(--rl-faint);
+}
+
+/* tier-4 = 历史分期角标：深底金线，与史实注脚在视觉上必须区分开 */
+.scene-label.tier-4 {
+  border-color: color-mix(in srgb, var(--rl-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--rl-ink) 88%, transparent);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--rl-surface);
+}
+
+.scene-label.tier-4 i {
+  width: 4px;
+  height: 4px;
+  background: var(--rl-accent);
+}
+
+/* 勘查热点层：CSS2DRenderer 的容器自己铺满，按钮沿用 global.css 的 .world-hotspot */
+.scene-hotspots {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.scene-hotspots.is-hidden {
+  display: none;
+}

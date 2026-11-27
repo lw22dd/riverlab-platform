@@ -315,6 +315,8 @@ async function initStage() {
     })
     stage.value = built
     stageError.value = ''
+    // 开发期把场景句柄挂到 window 上，方便 Playwright 直接驱动 stage 动作做回归截图。
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__scenarioStage = built
     const node = currentNode.value
     if (node?.focus) built.focus(node.focus)
     if (node?.ambience) built.setAmbience(node.ambience)

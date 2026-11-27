@@ -85,6 +85,31 @@ const searchHistory = ref<string[]>([])
 let chartInstance: echarts.ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
 
+// 首页带 ?space=<slug> 进来时请求定位某个景区：地图与列表都是异步就绪的，
+// 先记下目标，等 series 数据落图后再应用，避免"点了没反应"。
+let pendingFocus: { id: number; zoom: number } | null = null
+
+const applyPendingFocus = () => {
+  if (!pendingFocus || !chartInstance) return
+  const target = spaceList.value.find((space) => space.id === pendingFocus!.id)
+  if (!target) return
+
+  const { zoom } = pendingFocus
+  pendingFocus = null
+
+  chartInstance.setOption({
+    geo: {
+      center: [target.longitude, target.latitude],
+      zoom,
+    },
+  })
+  chartInstance.dispatchAction({
+    type: 'highlight',
+    seriesIndex: 0,
+    name: target.name,
+  })
+}
+
 const loadSearchHistory = () => {
   try {
     const history = localStorage.getItem('searchHistory')
@@ -268,6 +293,9 @@ const initMap = async () => {
       updateMapData()
     }
 
+    // 深链定位请求可能比图表初始化更早到达，这里补一次应用
+    applyPendingFocus()
+
   } catch (error) {
     console.error('Failed to load map:', error)
   }
@@ -290,6 +318,8 @@ const updateMapData = () => {
       data: scatterData
     }]
   })
+
+  applyPendingFocus()
 }
 
 const handleSearchChange = (value: string) => {
@@ -374,13 +404,10 @@ onUnmounted(() => {
 })
 
 defineExpose({
-  focusSpace: (spaceId: number) => {
-    const space = spaceList.value.find(s => s.id === spaceId)
-    if (space && chartInstance) {
-      chartInstance.setOption({
-        geo: { center: [space.longitude, space.latitude], zoom: 4 }
-      })
-    }
+  /** 在地图上定位某个景区（供首页 ?space=<slug> 深链使用）。 */
+  focusSpace: (spaceId: number, zoom = 3.2) => {
+    pendingFocus = { id: spaceId, zoom }
+    applyPendingFocus()
   }
 })
 </script>

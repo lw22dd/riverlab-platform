@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>都江堰 · 一江到两江（低多边形三维建造仿真）</title>
+<style>
+  :root {
+    --paper: #f4eddd;
+    --paper-deep: #e8dec8;
+    --ink: #22261e;
+    --ink-soft: #4c5345;
+    --ink-faint: #7a816f;
+    --jade: #3c604e;
+    --sand: #b69458;
+    --rust: #a94f2c;
+    --water: #306b79;
+    --line: rgba(34, 38, 30, 0.16);
+    --panel: rgba(244, 237, 221, 0.88);
+    --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", Georgia, serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    --pad: clamp(12px, 2vw, 26px);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #161b15; color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  #stage { position: fixed; inset: 0; opacity: 0; transition: opacity 600ms ease; }
+  body.is-ready #stage { opacity: 1; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* 3-Tier Screen Labels */
+  #labels { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .scene-label {
+    position: absolute; left: 0; top: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px 3px 7px; font-size: 12px; letter-spacing: 0.05em; line-height: 1.25;
+    color: var(--ink); background: rgba(244, 237, 221, 0.84);
+    border: 1px solid rgba(34, 38, 30, 0.22); border-radius: 1px;
+    white-space: nowrap; opacity: 0; transition: opacity 220ms ease;
+    backdrop-filter: blur(4px); will-change: transform, opacity;
+  }
+  .scene-label i { width: 5px; height: 5px; border-radius: 50%; background: var(--rust); flex: none; }
+  .scene-label.tier-1 { font-weight: 600; }
+  .scene-label.tier-1 i { background: var(--jade); }
+  .scene-label.tier-2 { border-color: rgba(169, 79, 44, 0.45); background: rgba(248, 241, 226, 0.92); }
+  .scene-label.tier-3 { font-size: 11px; color: var(--ink-soft); background: rgba(244, 237, 221, 0.72); border-style: dashed; }
+  .scene-label.tier-3 i { background: var(--sand); width: 4px; height: 4px; }
+/* tier-4 = 历史分期角标：竖向书签样式，与"史实注脚"在视觉上必须区分开 */
+.scene-label.tier-4 {
+  font-size: 10.5px; letter-spacing: 0.02em; color: #f4ecdc;
+  background: rgba(58, 46, 33, 0.86); border-color: rgba(214, 178, 92, 0.55);
+}
+.scene-label.tier-4 i { background: #d6b25c; width: 4px; height: 4px; }
+.scene-label.tier-4 b { color: #e8c877; }
+/* 四项定量实验：卡片 + 迷你曲线（Canvas 2D，不占 WebGL 预算） */
+.exp-wrap { margin-top: 18px; border-top: 1px dashed rgba(120, 96, 66, 0.32); padding-top: 12px; }
+.exp-head h3 { font-size: 13px; letter-spacing: 0.06em; color: var(--ink); margin: 0 0 4px; }
+.exp-head span { display: block; font-size: 10.5px; line-height: 1.6; color: var(--ink-soft); margin-bottom: 10px; }
+.exp-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.exp-card { background: rgba(252, 248, 240, 0.72); border: 1px solid rgba(120, 96, 66, 0.20); border-radius: 4px; padding: 7px 8px 5px; }
+.exp-card h4 { margin: 0 0 3px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+.exp-card h4 em { font-style: normal; font-weight: 400; font-size: 9.5px; color: var(--ink-soft); margin-left: 4px; }
+.exp-val { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+.exp-val b { font-size: 15px; font-weight: 600; color: var(--rust); font-variant-numeric: tabular-nums; }
+.exp-val small { font-size: 9.5px; color: var(--ink-soft); }
+/* 曲线按 320×96 原生像素绘制，CSS 不再拉伸 → 9.5px 的字保持清晰 */
+.exp-card canvas { display: block; width: 320px; max-width: 100%; height: auto; margin: 0 auto; }
+@media (max-width: 900px) { .exp-grid { grid-template-columns: 1fr; } }
+  .scene-label b { font-weight: 500; font-size: 9.5px; color: var(--sand); margin-left: 2px; }
+
+  /* Masthead */
+  .masthead {
+    position: fixed; top: var(--pad); left: var(--pad); z-index: 6; pointer-events: none; max-width: 30ch;
+    text-shadow: 0 1px 0 rgba(244, 237, 221, 0.65);
+  }
+  .kicker { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.28em; color: var(--rust); }
+  .masthead h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(22px, 3vw, 34px); letter-spacing: 0.06em; line-height: 1.08; }
+  .masthead h1::after { content: ""; display: block; width: 42px; height: 1px; margin-top: 9px; background: var(--ink); opacity: 0.45; }
+  .lede { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--ink-soft); }
+
+  /* Top Tools */
+  .tools { position: fixed; top: var(--pad); right: var(--pad); z-index: 7; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 62vw; }
+  .tool-group { display: inline-flex; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(8px); border-radius: 1px; overflow: hidden; }
+  .chip {
+    appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; letter-spacing: 0.05em;
+    padding: 7px 11px; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 1px; backdrop-filter: blur(8px);
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .tool-group .chip { border: 0; border-right: 1px solid var(--line); background: transparent; backdrop-filter: none; padding: 7px 9px; }
+  .tool-group .chip:last-child { border-right: 0; }
+  .chip:hover { background: var(--paper); }
+  .chip.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chip.is-warn { background: var(--rust); color: var(--paper); border-color: var(--rust); }
+  .chip[hidden] { display: none; }
+
+  /* Phase Rail */
+  .rail {
+    position: fixed; left: var(--pad); top: clamp(134px, 21vh, 194px); z-index: 6;
+    width: 186px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .phase {
+    appearance: none; cursor: pointer; text-align: left;
+    display: grid; grid-template-columns: 20px 1fr; align-items: baseline; gap: 7px;
+    padding: 6px 8px 5px 6px; border: 0; border-left: 2px solid transparent;
+    background: rgba(244, 237, 221, 0.32); color: var(--ink-soft);
+    font: inherit; font-size: 12px; letter-spacing: 0.04em;
+    backdrop-filter: blur(4px); transition: all 160ms ease;
+  }
+  .phase:hover { color: var(--ink); background: rgba(244, 237, 221, 0.68); }
+  .phase-no { font-family: var(--serif); font-size: 10px; color: var(--sand); }
+  .phase-bar { grid-column: 2; height: 2px; background: rgba(34, 38, 30, 0.12); display: block; margin-top: 3px; }
+  .phase-bar i { display: block; height: 100%; width: 0; background: var(--rust); }
+  .phase.is-active { color: var(--ink); font-weight: 600; border-left-color: var(--rust); background: rgba(244, 237, 221, 0.84); }
+  .phase.is-active .phase-no { color: var(--rust); }
+
+  /* Bottom Caption & Transport */
+  .deck {
+    position: fixed; left: var(--pad); right: var(--pad);
+    bottom: calc(var(--pad) + env(safe-area-inset-bottom, 0px));
+    z-index: 6; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  .caption, .transport { pointer-events: auto; }
+  .caption {
+    max-width: 720px; padding: 12px 15px 13px;
+    background: var(--panel); border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+  }
+  .caption-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  #phase-index { font-family: var(--serif); font-size: 10.5px; letter-spacing: 0.12em; color: var(--sand); }
+  .caption h2 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: clamp(16px, 1.9vw, 20px); letter-spacing: 0.06em; }
+  .badge { font-style: normal; font-size: 10px; letter-spacing: 0.12em; padding: 2px 6px; border: 1px solid currentColor; color: var(--jade); }
+  .badge[data-tag="复原"] { color: var(--sand); }
+  .badge[data-tag="演绎"] { color: var(--rust); }
+  .badge[data-tag="沿革"] { color: var(--water); }
+  #branch-alert { font-size: 11px; color: var(--rust); margin-left: auto; font-weight: 500; }
+  #caption-text { margin: 7px 0 0; font-size: 13px; line-height: 1.72; color: var(--ink-soft); }
+
+  .transport {
+    display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+    width: min(720px, 100%); background: var(--panel); border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+  }
+  .circle-btn {
+    appearance: none; cursor: pointer; flex: none; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid rgba(34, 38, 30, 0.42); background: transparent; color: var(--ink);
+    font-size: 11px; display: grid; place-items: center; transition: all 150ms ease;
+  }
+  .circle-btn:hover { background: var(--ink); color: var(--paper); }
+  #scrub { flex: 1; min-width: 60px; -webkit-appearance: none; appearance: none; height: 18px; background: transparent; cursor: pointer; }
+  #scrub::-webkit-slider-runnable-track { height: 2px; background: rgba(34, 38, 30, 0.28); }
+  #scrub::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4.5px; border-radius: 50%;
+    background: var(--rust); border: 2px solid var(--paper); box-shadow: 0 0 0 1px rgba(34,38,30,0.3);
+  }
+  #clock { font-family: var(--serif); font-size: 11.5px; letter-spacing: 0.08em; color: var(--ink-soft); min-width: 72px; text-align: right; }
+  .speed { display: flex; gap: 2px; border-left: 1px solid var(--line); padding-left: 8px; }
+  .speed button { appearance: none; cursor: pointer; font: inherit; font-size: 10.5px; padding: 3px 5px; border: 0; background: transparent; color: var(--ink-faint); }
+  .speed button.on { color: var(--ink); background: rgba(34, 38, 30, 0.1); font-weight: 600; }
+
+  /* Side Drawers */
+  .drawer {
+    position: fixed; z-index: 9; top: calc(var(--pad) + 42px); right: var(--pad);
+    width: min(410px, calc(100vw - var(--pad) * 2)); max-height: min(74vh, 640px);
+    display: flex; flex-direction: column; background: var(--paper);
+    border: 1px solid rgba(34, 38, 30, 0.3); box-shadow: 0 22px 54px -26px rgba(10, 14, 9, 0.65);
+    opacity: 0; visibility: hidden; transform: translateY(-8px);
+    transition: opacity 220ms ease, transform 220ms ease, visibility 220ms;
+  }
+  .drawer.is-open { opacity: 1; visibility: visible; transform: none; }
+  .drawer-head { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 16px 10px; border-bottom: 1px solid var(--line); }
+  .drawer-head h2 { margin: 0; font-family: var(--serif); font-size: 15.5px; letter-spacing: 0.08em; }
+  .drawer-close { appearance: none; cursor: pointer; border: 0; background: transparent; font: inherit; font-size: 11.5px; color: var(--ink-faint); }
+  .drawer-close:hover { color: var(--rust); }
+  .drawer-body { overflow-y: auto; padding: 12px 16px 16px; }
+  .drawer-note { margin: 0 0 10px; font-size: 11.5px; line-height: 1.65; color: var(--ink-faint); }
+
+  /* Branch Lab */
+  .branch-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .branch-row:last-of-type { border-bottom: 0; }
+  .branch-row label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+  .branch-row label span { font-weight: 400; font-size: 10.5px; color: var(--ink-faint); }
+  .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .seg button {
+    flex: 1; min-width: 78px; appearance: none; cursor: pointer; font: inherit; font-size: 11px;
+    padding: 6px 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.45); color: var(--ink-soft);
+    transition: all 140ms ease;
+  }
+  .seg button:hover { border-color: rgba(34,38,30,0.4); color: var(--ink); }
+  .seg button.on { background: var(--jade); color: var(--paper); border-color: var(--jade); }
+  .seg button.on.is-alt { background: var(--rust); border-color: var(--rust); }
+
+  /* Brief Stats & Parts */
+  .brief-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
+  .brief-stats div { display: flex; flex-direction: column; gap: 2px; }
+  .brief-stats strong { font-family: var(--serif); font-size: 16px; font-weight: 600; }
+  .brief-stats span { font-size: 10px; color: var(--ink-faint); }
+  .part { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .part:last-child { border-bottom: 0; }
+  .part h3 { margin: 0 0 5px; font-family: var(--serif); font-size: 13.5px; }
+  .part dl { margin: 0; display: grid; grid-template-columns: 36px 1fr; gap: 2px 8px; font-size: 11.5px; line-height: 1.55; }
+  .part dt { color: var(--sand); }
+  .part dd { margin: 0; color: var(--ink-soft); }
+
+  .footnote {
+    position: fixed; right: var(--pad); bottom: calc(var(--pad) + env(safe-area-inset-bottom, 0px));
+    z-index: 5; font-size: 10.5px; color: var(--ink-soft); background: rgba(244,237,221,0.72);
+    padding: 4px 8px; border: 1px solid var(--line); pointer-events: none;
+  }
+
+  #error-banner {
+    position: fixed; inset: 0; z-index: 99; display: none; place-items: center; padding: 24px;
+    background: #1a1e18; color: var(--paper); text-align: center;
+  }
+  #error-banner p { max-width: 48ch; line-height: 1.7; font-size: 13.5px; color: #d8d1be; }
+
+  @media (max-width: 920px) {
+    .lede, .footnote, .speed { display: none; }
+    .masthead { max-width: 15ch; }
+    .tools { max-width: 70vw; }
+    .cam-group { display: none; }
+    .rail {
+      top: auto; left: 0; right: 0; width: auto; padding: 0 var(--pad);
+      bottom: calc(var(--pad) + 146px + env(safe-area-inset-bottom, 0px));
+      flex-direction: row; overflow-x: auto; gap: 4px; scrollbar-width: none;
+    }
+    .rail::-webkit-scrollbar { display: none; }
+    .phase { flex: none; grid-template-columns: 18px auto; border-left: 0; border-bottom: 2px solid transparent; background: rgba(244,237,221,0.74); padding: 6px 9px; }
+    .phase.is-active { border-bottom-color: var(--rust); }
+    .phase-bar { display: none; }
+    .caption { max-width: none; padding: 10px 12px; }
+    #caption-text { font-size: 12px; line-height: 1.6; max-height: 4.8em; overflow: auto; }
+    .transport { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="labels" aria-hidden="true"></div>
+
+<header class="masthead">
+  <p class="kicker">公元前 256 年 · 蜀郡渠首</p>
+  <h1>一江，两江</h1>
+  <p class="lede">都江堰低多边形建造仿真：玉垒山阻水、火烧水激凿宝瓶口、依洲沉竹笼筑鱼嘴、飞沙堰溢流与岁修润平原。</p>
+</header>
+
+<div class="tools">
+  <div class="tool-group cam-group" role="group" aria-label="视角预设">
+    <button class="chip" data-preset="overview">全景</button>
+    <button class="chip" data-preset="gorge">宝瓶口</button>
+    <button class="chip" data-preset="yuzui">鱼嘴</button>
+    <button class="chip" data-preset="weir">飞沙堰</button>
+    <button class="chip" data-preset="plain">成都平原</button>
+  </div>
+  <button id="season-btn" class="chip" title="手动切换枯水/洪水检验分水与溢流">水情：随阶段</button>
+  <button id="follow-btn" class="chip is-warn" hidden>自由视角 · 归位</button>
+  <button id="branch-open" class="chip">分支实验</button>
+  <button id="brief-open" class="chip">建模提单</button>
+</div>
+
+<aside id="branch-drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>工程分支实验（确定性状态机）</h2>
+    <button class="drawer-close" data-close="branch-drawer">关闭</button>
+  </div>
+  <div class="drawer-body">
+    <p class="drawer-note">任意切换 6 项决策，3D 地形、堤体与水文将即时按纯函数重算，可随时复位。</p>
+    <div class="branch-row">
+      <label>1. 宝瓶口开凿工法 <span>影响岩塞贯通</span></label>
+      <div class="seg" data-key="carve">
+        <button data-val="fire" class="on">火烧水激</button>
+        <button data-val="chisel" class="is-alt">纯铁锤凿</button>
+        <button data-val="bypass" class="is-alt">绕山南引</button>
+      </div>
+    </div>
+    <div class="branch-row">
+      <label>2. 鱼嘴/金刚堤用料 <span>影响抗洪形态</span></label>
+      <div class="seg" data-key="dikeMat">
+        <button data-val="gabion" class="on">竹笼卵石</button>
+        <button data-val="stone" class="is-alt">散抛大石</button>
+        <button data-val="earth" class="is-alt">夯土堤</button>
+      </div>
+    </div>
+    <div class="branch-row">
+      <label>3. 鱼嘴分水方位 <span>影响内外江分配</span></label>
+      <div class="seg" data-key="splitPos">
+        <button data-val="center" class="on">借洲居中</button>
+        <button data-val="east" class="is-alt">偏东逼崖</button>
+        <button data-val="west" class="is-alt">偏西过宽</button>
+      </div>
+    </div>
+    <div class="branch-row">
+      <label>4. 飞沙堰堰顶高程 <span>影响洪峰溢流</span></label>
+      <div class="seg" data-key="weirHeight">
+        <button data-val="low" class="on">低堰 (+0.62)</button>
+        <button data-val="high" class="is-alt">高堰 (+1.24)</button>
+      </div>
+    </div>
+    <div class="branch-row">
+      <label>5. 岁修淘滩深度 <span>影响内江过流</span></label>
+      <div class="seg" data-key="dredge">
+        <button data-val="deep" class="on">深淘见基岩</button>
+        <button data-val="shallow" class="is-alt">浅淘留淤</button>
+      </div>
+    </div>
+    <div class="branch-row">
+      <label>6. 季节水情工况 <span>检验四六分水与淹洲</span></label>
+      <div class="seg" data-key="season">
+        <button data-val="auto" class="on">随阶段自动</button>
+        <button data-val="dry">枯水 (0.00)</button>
+        <button data-val="flood" class="is-alt">洪水 (+0.72)</button>
+      </div>
+    </div>
+    <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+      <button id="branch-reset" class="chip">↺ 恢复史实默认</button>
+    </div>
+
+    <div class="exp-wrap">
+      <div class="exp-head">
+        <h3>四项定量实验</h3>
+        <span>由同一套水理解析式即时求解，与 3D 场景同源；拖动下方阶段时间轴可看工况随之变化</span>
+      </div>
+      <div class="exp-grid">
+        <div class="exp-card">
+          <h4>① 四六分水 <em>分水比随流量反转</em></h4>
+          <div class="exp-val"><b id="exp-v1">—</b><small id="exp-s1"></small></div>
+          <canvas id="exp-c1" width="320" height="96"></canvas>
+        </div>
+        <div class="exp-card">
+          <h4>② 低作堰 <em>堰高决定溢流与排沙</em></h4>
+          <div class="exp-val"><b id="exp-v2">—</b><small id="exp-s2"></small></div>
+          <canvas id="exp-c2" width="320" height="96"></canvas>
+        </div>
+        <div class="exp-card">
+          <h4>③ 三料抗冲 <em>竹笼/散石/夯土</em></h4>
+          <div class="exp-val"><b id="exp-v3">—</b><small id="exp-s3"></small></div>
+          <canvas id="exp-c3" width="320" height="96"></canvas>
+        </div>
+        <div class="exp-card">
+          <h4>④ 深淘滩 <em>过流能力对比</em></h4>
+          <div class="exp-val"><b id="exp-v4">—</b><small id="exp-s4"></small></div>
+          <canvas id="exp-c4" width="320" height="96"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<aside id="brief-drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>部件建模提单 & 实时性能</h2>
+    <button class="drawer-close" data-close="brief-drawer">关闭</button>
+  </div>
+  <div id="brief-body" class="drawer-body"></div>
+</aside>
+
+<nav class="rail" id="phases" aria-label="建造阶段"></nav>
+
+<footer class="deck">
+  <div class="caption">
+    <div class="caption-head">
+      <span id="phase-index">01 / 08</span>
+      <h2 id="caption-title">峡口未凿</h2>
+      <em id="caption-tag" class="badge" data-tag="复原">复原</em>
+      <span id="branch-alert"></span>
+    </div>
+    <p id="caption-text"></p>
+  </div>
+  <div class="transport">
+    <button id="play-btn" class="circle-btn" aria-label="播放或暂停">❚❚</button>
+    <button id="reset-btn" class="circle-btn" aria-label="回到开篇" title="回到 00:00">↺</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="时间轴">
+    <span id="clock">00:00 / 01:04</span>
+    <div class="speed" role="group" aria-label="播放速度">
+      <button data-speed="0.5">0.5×</button>
+      <button data-speed="1" class="on">1×</button>
+      <button data-speed="2">2×</button>
+    </div>
+  </div>
+</footer>
+
+<div class="footnote">锚点按现状配准 · 1平面单位≈20m · 无明清卧铁 · 拖拽环绕/滚轮缩放</div>
+
+<div id="error-banner">
+  <div>
+    <h2 style="font-family:var(--serif);margin:0 0 10px;">Three.js 模块加载失败</h2>
+    <p>本演示通过 jsDelivr 加载 Three.js r186 ES Module。请确认网络连接正常，或将 importmap 指向本地 three.module.js。</p>
+  </div>
+</div>
+
+<!--BUNDLE-->
+</body>
+</html>

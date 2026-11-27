@@ -3,21 +3,26 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { createTree } from '../primitives'
 import { Stage, disposeObject } from '../stage'
 import type { CameraPreset, ScenarioSceneOptions, ScenarioStageHandle } from './types'
+import { anchors, contains, frames, inFrame, mapWater, polygonGeometry, waterways, type Frame, type Polygon } from './dujiangyan-geography'
+import { createFireBed, createGabion, createMacha, createWeirGabionCourse } from './dujiangyan-structures'
+import { createMapTerrain, getRidgeHeight, getTerrainHeight } from './dujiangyan-terrain'
+import { createSealNose } from './dujiangyan-seal'
+import { solveHydraulics, type HydraulicInput, type HydraulicResult } from './dujiangyan-hydraulics'
 
 type StageTween = ReturnType<Stage['after']>
 type TweenTarget = Parameters<Stage['tweenTo']>[0]
 type TweenVars = Parameters<Stage['tweenTo']>[1]
 
 const CAMERA_PRESETS: Record<string, CameraPreset> = {
-  overview: { position: [12, 56, -44], target: [10, 0, 14] },
-  survey: { position: [10, 72, -58], target: [10, 0, 18] },
-  bottleneck: { position: [16, 16, -18], target: [14.5, 4, 12] },
-  irrigation: { position: [10, 48, -16], target: [10, 0, 46] },
-  fishmouth: { position: [26, 26, -26], target: [2, 1, 2] },
-  split: { position: [28, 30, -30], target: [4, 1, 5] },
-  weir: { position: [42, 18, -18], target: [27, 1, 2] },
-  maintenance: { position: [50, 14, -10], target: [39, 1, 6] },
-  legacy: { position: [10, 58, -46], target: [10, 0, 16] },
+  overview: { position: [45, 114, 94], target: [1, 0, 5] },
+  survey: { position: [40, 122, 99], target: [1, 0, 5] },
+  bottleneck: { position: [8, 10, 7], target: [16.2, 1.5, 17] },
+  irrigation: { position: [51, 38, 64], target: [30, 0, 34] },
+  fishmouth: { position: [0, 16, -43], target: [-10, 0.8, -22] },
+  split: { position: [15, 40, -54], target: [-6, 0, -11] },
+  weir: { position: [13, 12, 30], target: [4.4, 0.5, 17.2] },
+  maintenance: { position: [14, 15, -4], target: [4, 0.8, -2] },
+  legacy: { position: [53, 82, 94], target: [3, 0, 5] },
 }
 
 const AMBIENCE = {
@@ -78,41 +83,7 @@ const CAGE_TARGETS: Array<[number, number, number, number]> = [
   [9.2, 0.42, 0.2, 0.03],
 ]
 
-const CANALS: Array<{ path: Array<[number, number]>; widths: number[] }> = [
-  {
-    path: [
-      [14.5, 18],
-      [10.5, 24],
-      [4.5, 30],
-      [-3.5, 38],
-      [-13.5, 48],
-      [-24, 60],
-    ],
-    widths: [2.6, 2.3, 2.0, 1.8, 1.55, 1.3],
-  },
-  {
-    path: [
-      [14.5, 18],
-      [14.5, 26],
-      [14, 36],
-      [13, 48],
-      [12, 60],
-      [11, 74],
-    ],
-    widths: [2.8, 2.5, 2.2, 2.0, 1.8, 1.5],
-  },
-  {
-    path: [
-      [14.5, 18],
-      [19, 24],
-      [25, 30],
-      [33, 38],
-      [41, 48],
-      [49, 60],
-    ],
-    widths: [2.6, 2.3, 2.0, 1.8, 1.55, 1.3],
-  },
-]
+const CANALS = [ { path: waterways.outlet.path.slice(1), widths: waterways.outlet.widths.slice(1) }, ...waterways.canals ]
 
 interface BedProfile {
   center: number
@@ -586,7 +557,7 @@ export function buildDujiangyanScene(
   ground.rotation.x = -Math.PI / 2
   ground.position.set(0, -0.04, 18)
   ground.receiveShadow = true
-  stage.scene.add(ground)
+  stage.scene.add(ground, createMapTerrain())
 
   const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x6a6a5c, roughness: 0.98, flatShading: true })
   const darkRockMaterial = new THREE.MeshStandardMaterial({ color: 0x55574e, roughness: 1, flatShading: true })
@@ -610,6 +581,22 @@ export function buildDujiangyanScene(
   addPeak(78, 34, 16, 18, rockMaterial)
   addPeak(46, 82, 14, 16, greenRockMaterial)
   addPeak(-86, -18, 14, 16, greenRockMaterial)
+
+  function register(frame: Frame, name: string): THREE.Group {
+    const [x, z] = inFrame(frame, [0, 0])
+    const group = new THREE.Group()
+    group.name = name
+    group.position.set(x, 0, z)
+    group.rotation.y = frame.yaw
+    group.scale.setScalar(frame.scale)
+    stage.scene.add(group)
+    return group
+  }
+  const gapSite = register(frames.gap, 'Baopingkou construction')
+  const fishSite = register(frames.fishmouth, 'Fishmouth construction')
+  const weirSite = register(frames.weir, 'Feishayan construction')
+  const maintenanceSite = register(frames.maintenance, 'Macha diversion')
+  const dredgeSite = register(frames.dredge, 'Fengqiwo dredging')
 
   // 水体
   const waterMaterials: THREE.ShaderMaterial[] = []
@@ -638,6 +625,7 @@ export function buildDujiangyanScene(
     bed: BedProfile,
     parent: THREE.Object3D = stage.scene,
     withBed = true,
+    surface?: Polygon,
   ): Channel {
     const curve = new THREE.CatmullRomCurve3(
       path.map(([x, z]) => new THREE.Vector3(x, 0, z)),
@@ -659,7 +647,12 @@ export function buildDujiangyanScene(
     material.uniforms.uBedCenter.value = bed.center
     material.uniforms.uBedEdge.value = bed.edge
     waterMaterials.push(material)
-    const mesh = new THREE.Mesh(createRibbonGeometry(curve, widths, 0, 140, 6), material)
+    const geometry = surface ? polygonGeometry(surface) : createRibbonGeometry(curve, widths, 0, 140, 6)
+    if (surface) {
+      const uv = geometry.getAttribute('uv')
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.26 + uv.getX(i) / 340, uv.getY(i) / 86)
+    }
+    const mesh = new THREE.Mesh(geometry, material)
     mesh.renderOrder = 2
     parent.add(mesh)
     const flow = new THREE.InstancedMesh(
@@ -680,120 +673,21 @@ export function buildDujiangyanScene(
     return { mesh, material, flow, flowData, maxFlow: flowCount, widthSampler, curve, bed, bedMesh }
   }
 
-  const upstreamChannel = buildChannel(
-    [
-      [-110, 0],
-      [-82, 0],
-      [-54, 0],
-      [-28, 0],
-      [-10, 0],
-    ],
-    [18, 18, 17, 16, 15],
-    80,
-    0x245a63,
-    0x66a6a3,
-    UPSTREAM_BED,
-  )
-  const innerChannel = buildChannel(
-    [
-      [-8, 0],
-      [-4, 3],
-      [0, 6],
-      [8, 6],
-      [20, 6],
-      [40, 6],
-      [70, 6],
-    ],
-    [7, 6, 5.6, 5.4, 5.2, 5, 4.6],
-    120,
-    0x1f5e66,
-    0x63aaa4,
-    INNER_BED,
-  )
-  const outerChannel = buildChannel(
-    [
-      [-8, 0],
-      [-4, -3],
-      [0, -6],
-      [8, -6],
-      [20, -6],
-      [40, -6],
-      [70, -6],
-      [104, -6],
-    ],
-    [10, 10, 9.6, 9.4, 9.2, 9, 8.6, 8],
-    120,
-    0x2a5f63,
-    0x6aa9a5,
-    OUTER_BED,
-  )
-
-  // 宝瓶口：山体北岸的一条南北向缺口。水面从内江（z=6）穿过缺口到灌渠（z=18）。
-  const gapWaterMaterial = createWaterMaterial(0x1f5e66, 0x63aaa4)
-  gapWaterMaterial.uniforms.uOpacity.value = 0.0
-  gapWaterMaterial.uniforms.uFoam.value = 0.18
-  waterMaterials.push(gapWaterMaterial)
-  const gapCurve = new THREE.CatmullRomCurve3(
-    [
-      new THREE.Vector3(GAP.x, 0, 6),
-      new THREE.Vector3(GAP.x, 0, 10),
-      new THREE.Vector3(GAP.x, 0, 14),
-      new THREE.Vector3(GAP.x, 0, 18),
-    ],
-    false,
-    'catmullrom',
-    0.25,
-  )
-  const gapWater = new THREE.Mesh(new THREE.PlaneGeometry(6, 13), gapWaterMaterial)
-  gapWater.rotation.x = -Math.PI / 2
-  gapWater.position.set(GAP.x, 0.1, 12.5)
+  const upstreamChannel = buildChannel(waterways.upstream.path, waterways.upstream.widths, 80, 0x245a63, 0x66a6a3, UPSTREAM_BED, stage.scene, false)
+  upstreamChannel.mesh.visible = false
+  const innerChannel = buildChannel(waterways.inner.path, waterways.inner.widths, 120, 0x1f5e66, 0x63aaa4, INNER_BED, stage.scene, false, mapWater.inner)
+  const outerChannel = buildChannel(waterways.outer.path, waterways.outer.widths, 120, 0x2a5f63, 0x6aa9a5, OUTER_BED, stage.scene, false, mapWater.outer)
+  for (const polygon of [mapWater.inner, mapWater.outer]) {
+    const bed = new THREE.Mesh(polygonGeometry(polygon), new THREE.MeshStandardMaterial({ color: 0x74644e, roughness: 1 }))
+    bed.position.y = -0.018
+    stage.scene.add(bed)
+  }
+  const gapRoute: Array<[number, number]> = [[13.7, 16.7], ...waterways.outlet.path.slice(0, 2)]
+  const gapChannel = buildChannel(gapRoute, [1.4, 1, 1.8], 26, 0x1f5e66, 0x63aaa4, CANAL_BED, stage.scene, false)
+  const { mesh: gapWater, material: gapWaterMaterial } = gapChannel
   gapWater.visible = false
-  gapWater.renderOrder = 2
-  stage.scene.add(gapWater)
-  const gapBankMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7b5e, roughness: 1, flatShading: true })
-  for (const side of [-1, 1] as const) {
-    const bankCurve = new THREE.CatmullRomCurve3(
-      [
-        new THREE.Vector3(GAP.x + side * 3.0, 0, 6),
-        new THREE.Vector3(GAP.x + side * 3.0, 0, 12),
-        new THREE.Vector3(GAP.x + side * 3.0, 0, 19),
-      ],
-      false,
-      'catmullrom',
-      0.2,
-    )
-    const bank = new THREE.Mesh(
-      createRibbonGeometry(bankCurve, [1.6, 1.6, 1.6], 0.34, 36, 2, 0.14),
-      gapBankMaterial,
-    )
-    bank.receiveShadow = true
-    stage.scene.add(bank)
-  }
-  const gapChannel: Channel = {
-    mesh: gapWater,
-    material: gapWaterMaterial,
-    flow: new THREE.InstancedMesh(
-      new THREE.SphereGeometry(1, 6, 4),
-      new THREE.MeshBasicMaterial({ color: 0xe3f6ef, transparent: true, opacity: 0.28, depthWrite: false }),
-      26,
-    ),
-    flowData: [],
-    maxFlow: 26,
-    widthSampler: (t) => widthAt([4.0, 4.6, 4.6, 4.0], t),
-    curve: gapCurve,
-    bed: { center: 0.02, edge: 0.08 },
-  }
-  const gapRandom = mulberry32(71)
-  gapChannel.flowData = Array.from({ length: 26 }, () => ({
-    offset: gapRandom(),
-    speed: 0.5 + gapRandom() * 0.5,
-    lane: (gapRandom() - 0.5) * 0.6,
-    size: 0.6 + gapRandom() * 0.7,
-  }))
-  gapChannel.flow.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-  gapChannel.flow.frustumCulled = false
   gapChannel.flow.visible = false
-  stage.scene.add(gapChannel.flow)
+  gapWaterMaterial.uniforms.uOpacity.value = 0
 
   // 内江/外江分水鱼嘴：天然沙洲 + 后期竹笼护岸
   const gravelBar = new THREE.Mesh(
@@ -803,36 +697,26 @@ export function buildDujiangyanScene(
   gravelBar.scale.set(9, 0.34, 1.35)
   gravelBar.position.set(0, 0.08, 0)
   gravelBar.receiveShadow = true
-  stage.scene.add(gravelBar)
+  fishSite.add(gravelBar)
   const gravelNose = new THREE.Mesh(
     new THREE.ConeGeometry(1.25, 4.6, 5),
     new THREE.MeshStandardMaterial({ color: 0xb7a47f, roughness: 1, flatShading: true }),
   )
   gravelNose.rotation.z = -Math.PI / 2
   gravelNose.position.set(-9.4, 0.22, 0)
-  stage.scene.add(gravelNose)
+  fishSite.add(gravelNose)
 
   const bambooMaterial = new THREE.MeshStandardMaterial({ color: 0xb08b52, roughness: 0.9, flatShading: true })
-  const ropeMaterial = new THREE.MeshStandardMaterial({ color: 0x6e5634, roughness: 0.95 })
   const cageGroups: THREE.Group[] = []
   const cageTargets: THREE.Vector3[] = []
   const cagePlaced: boolean[] = []
   for (const [x, y, z, rotation] of CAGE_TARGETS) {
-    const cage = new THREE.Group()
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 2.5, 8, 1, true), bambooMaterial)
-    barrel.rotation.x = Math.PI / 2
-    barrel.castShadow = true
-    cage.add(barrel)
-    for (const offset of [-0.82, 0.82]) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.04, 4, 8), ropeMaterial)
-      ring.rotation.y = Math.PI / 2
-      ring.position.z = offset
-      cage.add(ring)
-    }
+    const cage = createGabion()
+
     cage.position.set(x, y, z)
     cage.rotation.y = rotation
     cage.visible = false
-    stage.scene.add(cage)
+    fishSite.add(cage)
     cageGroups.push(cage)
     cageTargets.push(new THREE.Vector3(x, y, z))
     cagePlaced.push(false)
@@ -857,7 +741,7 @@ export function buildDujiangyanScene(
   levee.add(leveeCrest)
   levee.scale.y = 0.001
   levee.visible = false
-  stage.scene.add(levee)
+  fishSite.add(levee)
 
   // 40 个护岸竹笼沿鱼嘴两侧展开
   const cageWallGeometry = new THREE.CylinderGeometry(0.4, 0.4, 2.2, 8)
@@ -867,7 +751,7 @@ export function buildDujiangyanScene(
   cageWall.castShadow = true
   cageWall.receiveShadow = true
   cageWall.visible = false
-  stage.scene.add(cageWall)
+  fishSite.add(cageWall)
   const cageWallData: Array<{ x: number; y: number; z: number; ry: number; scale: number }> = []
   const cageWallRandom = mulberry32(303)
   for (let index = 0; index < 10; index += 1) {
@@ -901,111 +785,47 @@ export function buildDujiangyanScene(
     cageWall.instanceMatrix.needsUpdate = true
   }
 
-  // 玉垒山：北岸两团岩体，中间留出宝瓶口；缺口用可崩落的岩塞填住。
-  const mountain = new THREE.Group()
-  stage.scene.add(mountain)
-  const mountainRandom = mulberry32(88)
-  function addMass(x: number, z: number, sx: number, sy: number, sz: number, material: THREE.Material): void {
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), material)
-    rock.position.set(x, sy * 0.55 - 0.3, z)
-    rock.scale.set(sx, sy, sz)
-    rock.rotation.set(mountainRandom() * 0.2, mountainRandom() * Math.PI, mountainRandom() * 0.15)
-    rock.castShadow = true
-    rock.receiveShadow = true
-    mountain.add(rock)
-  }
-  addMass(3, 16, 8.5, 6.8, 9.5, rockMaterial)
-  addMass(5, 19, 6.5, 8.2, 7.2, greenRockMaterial)
-  addMass(-6, 12, 4.2, 4.6, 5.2, darkRockMaterial)
-  addMass(25.5, 16, 8.2, 7.2, 9.2, rockMaterial)
-  addMass(23.5, 20, 6.2, 9.4, 7.0, greenRockMaterial)
-  addMass(31, 12, 4.4, 5.0, 5.4, darkRockMaterial)
-  for (const [x, z, scale, color] of [
-    [-4, 22, 1.15, 0x5f7a4f],
-    [2, 24, 1.0, 0x647f53],
-    [25, 22, 1.15, 0x5f7a4f],
-    [30, 23, 1.0, 0x647f53],
-    [8, 18, 0.9, 0x526b45],
-    [20, 17, 1.0, 0x526b45],
-  ] as const) {
-    const tree = createTree({ scale, color })
-    tree.position.set(x, 6.8, z)
-    mountain.add(tree)
-  }
 
-  // 岩塞：真实几何岩块，块与块之间留缝；淬冷时缝隙张开，凿通时整组崩落。
-  const plugMaterial = new THREE.MeshStandardMaterial({ color: 0x9a917f, roughness: 0.98, flatShading: true })
-  const plugDarkMaterial = new THREE.MeshStandardMaterial({ color: 0x756f62, roughness: 1, flatShading: true })
-  // 岩塞内部是一团深色岩芯：块体裂开时，缝隙里看到的是它，而不是一张黑色平板。
-  const crackCore = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(1, 0),
-    new THREE.MeshStandardMaterial({
-      color: 0x3a2b22,
-      emissive: 0x2a0c04,
-      emissiveIntensity: 0.35,
-      roughness: 1,
-      flatShading: true,
-    }),
-  )
-  crackCore.position.set(GAP.x, 4.2, 11.8)
-  crackCore.scale.set(3.0, 4.3, 3.0)
-  stage.scene.add(crackCore)
-  const plugGroup = new THREE.Group()
-  stage.scene.add(plugGroup)
-  const plugChunks: Array<{
-    mesh: THREE.Mesh
-    home: THREE.Vector3
-    homeRotation: THREE.Euler
-    dir: number
-  }> = []
-  const plugRandom = mulberry32(99)
-  for (let column = 0; column < 3; column += 1) {
-    const slab = new THREE.Mesh(
-      new THREE.BoxGeometry(2.0, 7.2, 5.6),
-      column === 1 ? plugDarkMaterial : plugMaterial,
-    )
-    const home = new THREE.Vector3(
-      GAP.x - 2.05 + column * 2.05 + (plugRandom() - 0.5) * 0.06,
-      3.7,
-      GAP.z0 + 3.2 + (plugRandom() - 0.5) * 0.1,
-    )
-    slab.position.copy(home)
-    slab.rotation.set(
-      (plugRandom() - 0.5) * 0.035,
-      (plugRandom() - 0.5) * 0.045,
-      (plugRandom() - 0.5) * 0.03,
-    )
-    slab.castShadow = true
-    slab.receiveShadow = true
-    plugGroup.add(slab)
-    plugChunks.push({
-      mesh: slab,
-      home,
-      homeRotation: slab.rotation.clone(),
-      dir: column === 0 ? -1 : column === 2 ? 1 : 0,
-    })
-  }
-  for (let index = 0; index < 5; index += 1) {
-    const boulder = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.85 + plugRandom() * 0.35, 0),
-      index % 2 === 0 ? plugMaterial : plugDarkMaterial,
-    )
-    const home = new THREE.Vector3(
-      GAP.x - 2.0 + index * 1.0 + (plugRandom() - 0.5) * 0.2,
-      7.35 + (plugRandom() - 0.5) * 0.3,
-      GAP.z0 + 1.6 + (plugRandom() * 4.4),
-    )
-    boulder.position.copy(home)
-    boulder.rotation.set(plugRandom() * 0.6, plugRandom() * 0.8, plugRandom() * 0.5)
-    boulder.castShadow = true
-    boulder.receiveShadow = true
-    plugGroup.add(boulder)
-    plugChunks.push({
-      mesh: boulder,
-      home,
-      homeRotation: boulder.rotation.clone(),
-      dir: index < 2 ? -1 : index > 2 ? 1 : 0,
-    })
+
+  // 岩塞：不是几块方石，而是把整段峡口封死的连续山嘴。
+  // 顶面在两侧山壁上与地形等高、中央抬起成脊，所以未凿时它与玉垒山读作同一座山；
+  // 沿峡口轴向切成 5 片，节理张开、逐片外倾，凿通后露出下面已经切好的 V 形槽壁。
+  const throatStart = waterways.outlet.path[0]!
+  const throatEnd = waterways.outlet.path[1]!
+  const fireWorld = inFrame(frames.gap, [GAP.x, 8.8])
+  const sealNose = createSealNose({
+    start: { x: throatStart[0], z: throatStart[1] },
+    end: { x: throatEnd[0], z: throatEnd[1] },
+    sampleHeight: getRidgeHeight,
+    crestLift: 2.35,
+    // 与地形同一族颜色：底部岩石灰、脊线过渡到山脊草色，避免山嘴读成一块外来的深色石头。
+    colors: { lo: 0x7c7964, mid: 0x6f7a5e, hi: 0x859365 },
+    heatCenter: new THREE.Vector3(fireWorld[0], 1.1, fireWorld[1]),
+  })
+  stage.scene.add(sealNose.group)
+  // 炙烤强度与熏黑程度分开：浇水之后热度退了、焦痕还在。
+  const sealHeat = { value: 0 }
+  const sealChar = { value: 0 }
+  if (import.meta.env.DEV) {
+    // 开发期把岩塞与场景交出去，供 Playwright 做几何回归（生产构建里这段会被摇掉）。
+    ;(window as unknown as Record<string, unknown>).__djy = {
+      scene: stage.scene,
+      seal: sealNose,
+      terrainHeight: getTerrainHeight,
+      ridgeHeight: getRidgeHeight,
+      // 供 Playwright 断言用：当前工况 + 解析式判定
+      weir: () => ({
+        season: currentSeason,
+        weir: currentWeir,
+        overflow: overflow.amount,
+        spillQ: hydraulics().spillQ,
+        innerShare: hydraulics().innerShare,
+      }),
+      gap: { x: GAP.x, z0: GAP.z0, z1: GAP.z1 },
+      camera: stage.camera,
+      Raycaster: THREE.Raycaster,
+      Vector3: THREE.Vector3,
+    }
   }
 
   // 宝瓶口施工脚手架与火堆
@@ -1025,7 +845,7 @@ export function buildDujiangyanScene(
     deck.castShadow = true
     scaffold.add(deck)
   }
-  stage.scene.add(scaffold)
+  gapSite.add(scaffold)
 
   const flameMaterials = [
     new THREE.MeshBasicMaterial({
@@ -1045,6 +865,8 @@ export function buildDujiangyanScene(
   ]
   const fireGroup = new THREE.Group()
   const flames: THREE.Mesh[] = []
+  const fireBeds = new THREE.Group()
+  gapSite.add(fireBeds)
   for (const [x, z, scale] of [
     [GAP.x - 1.2, 8.6, 1.3],
     [GAP.x, 8.8, 1.1],
@@ -1054,6 +876,12 @@ export function buildDujiangyanScene(
     flame.position.set(x, 1.1 * scale, z)
     const inner = new THREE.Mesh(new THREE.ConeGeometry(0.25 * scale, 1.4 * scale, 5), flameMaterials[1])
     inner.position.set(x, 0.75 * scale, z)
+    const bed = createFireBed()
+    bed.position.set(x, 0.31, z)
+    bed.scale.setScalar(scale * 0.66)
+    fireBeds.add(bed)
+    flame.position.y += 0.42
+    inner.position.y += 0.42
     fireGroup.add(flame, inner)
     flames.push(flame, inner)
   }
@@ -1061,7 +889,7 @@ export function buildDujiangyanScene(
   fireLight.position.set(GAP.x, 2.4, 8.8)
   fireGroup.add(fireLight)
   fireGroup.visible = false
-  stage.scene.add(fireGroup)
+  gapSite.add(fireGroup)
 
   const emberCount = 42
   const emberPositions = new Float32Array(emberCount * 3)
@@ -1090,7 +918,7 @@ export function buildDujiangyanScene(
   const emberPoints = new THREE.Points(emberGeometry, emberMaterial)
   emberPoints.frustumCulled = false
   emberPoints.visible = false
-  stage.scene.add(emberPoints)
+  gapSite.add(emberPoints)
 
   const smokeCount = 26
   const smokePositions = new Float32Array(smokeCount * 3)
@@ -1115,30 +943,24 @@ export function buildDujiangyanScene(
   const smokePoints = new THREE.Points(smokeGeometry, smokeMaterial)
   smokePoints.frustumCulled = false
   smokePoints.visible = false
-  stage.scene.add(smokePoints)
+  gapSite.add(smokePoints)
   const quenchFlash = new THREE.PointLight(0xcfeaf3, 0, 16, 2)
   quenchFlash.position.set(GAP.x, 3, 9)
-  stage.scene.add(quenchFlash)
+  gapSite.add(quenchFlash)
 
   // 飞沙堰：内江南岸的侧向溢流堰，水从内江漫出后穿过外江。
   const weirGroup = new THREE.Group()
   weirGroup.position.set(WEIR_X, 0, 3.2)
-  const weirWallGeometry = new THREE.BoxGeometry(6, 1, 1.15)
-  weirWallGeometry.translate(0, 0.5, 0)
-  const weirWall = new THREE.Mesh(
-    weirWallGeometry,
-    new THREE.MeshStandardMaterial({ color: 0x77715f, roughness: 0.96, flatShading: true }),
-  )
-  weirWall.castShadow = true
-  weirWall.receiveShadow = true
+  const weirWall = new THREE.Group()
+  const lowerCourse = createWeirGabionCourse()
+  lowerCourse.scale.y = 0.52
+  const upperCourse = createWeirGabionCourse()
+  upperCourse.position.y = 0.47
+  upperCourse.scale.set(0.91, 0.53, 0.86)
+  weirWall.add(lowerCourse, upperCourse)
   weirWall.scale.y = 0.001
   weirGroup.add(weirWall)
-  const weirCap = new THREE.Mesh(
-    new THREE.BoxGeometry(6.2, 0.08, 1.4),
-    new THREE.MeshStandardMaterial({ color: 0x8c8468, roughness: 0.95 }),
-  )
-  weirCap.position.y = 0.3
-  weirGroup.add(weirCap)
+
   const crestFoamMaterial = new THREE.MeshBasicMaterial({
     color: 0xeaf7f2,
     transparent: true,
@@ -1150,7 +972,7 @@ export function buildDujiangyanScene(
   crestFoam.position.set(0, 0.3, 0.36)
   weirGroup.add(crestFoam)
   weirGroup.visible = false
-  stage.scene.add(weirGroup)
+  weirSite.add(weirGroup)
   const spillCurve = new THREE.CatmullRomCurve3(
     [
       new THREE.Vector3(WEIR_X, 0, 3.2),
@@ -1168,13 +990,13 @@ export function buildDujiangyanScene(
   const spillMesh = new THREE.Mesh(createRibbonGeometry(spillCurve, [5.6, 5.6, 5.6], 0.12, 40, 4), spillMaterial)
   spillMesh.visible = false
   spillMesh.renderOrder = 3
-  stage.scene.add(spillMesh)
+  weirSite.add(spillMesh)
   const spillBed = new THREE.Mesh(
     createRibbonGeometry(spillCurve, [6.2, 6.2, 6.2], 0.02, 40, 2),
     new THREE.MeshStandardMaterial({ color: 0x6a6350, roughness: 1 }),
   )
   spillBed.visible = false
-  stage.scene.add(spillBed)
+  weirSite.add(spillBed)
   const spillFallMaterial = new THREE.MeshBasicMaterial({
     color: 0xe9f7f2,
     transparent: true,
@@ -1184,7 +1006,7 @@ export function buildDujiangyanScene(
   })
   const spillFall = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 1.4), spillFallMaterial)
   spillFall.position.set(WEIR_X, 0.45, 3.2)
-  stage.scene.add(spillFall)
+  weirSite.add(spillFall)
   const spillFlow = new THREE.InstancedMesh(
     new THREE.SphereGeometry(1, 6, 4),
     new THREE.MeshBasicMaterial({ color: 0xe8f5f0, transparent: true, opacity: 0.16, depthWrite: false }),
@@ -1193,7 +1015,7 @@ export function buildDujiangyanScene(
   spillFlow.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   spillFlow.frustumCulled = false
   spillFlow.visible = false
-  stage.scene.add(spillFlow)
+  weirSite.add(spillFlow)
   const spillRandom = mulberry32(53)
   const spillFlowData = Array.from({ length: 16 }, () => ({
     offset: spillRandom(),
@@ -1217,7 +1039,7 @@ export function buildDujiangyanScene(
   const spillMist = new THREE.Points(mistGeometry, mistMaterial)
   spillMist.frustumCulled = false
   spillMist.visible = false
-  stage.scene.add(spillMist)
+  weirSite.add(spillMist)
   const mistRandom = mulberry32(54)
   const mistData = Array.from({ length: spillMistCount }, () => ({
     offset: mistRandom(),
@@ -1231,19 +1053,8 @@ export function buildDujiangyanScene(
   const cribSplashPoints: Array<[number, number, number]> = []
   for (const rowX of [CRIB_X - 1.2, CRIB_X + 1.2]) {
     for (const z of [3.4, 4.7, 6.0, 7.3, 8.6]) {
-      const tripod = new THREE.Group()
-      for (let index = 0; index < 3; index += 1) {
-        const angle = (index / 3) * Math.PI * 2
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.08, 2.1, 5), woodMaterial)
-        pole.position.set(Math.cos(angle) * 0.5, 1.05, Math.sin(angle) * 0.5)
-        pole.rotation.z = Math.cos(angle) * 0.35
-        pole.rotation.x = Math.sin(angle) * 0.35
-        pole.castShadow = true
-        tripod.add(pole)
-      }
-      const lash = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.35, 6), ropeMaterial)
-      lash.position.y = 2.05
-      tripod.add(lash)
+      const tripod = createMacha()
+
       tripod.position.set(rowX, 0, z)
       cribGroup.add(tripod)
       cribSplashPoints.push([rowX, 0.12, z])
@@ -1260,21 +1071,10 @@ export function buildDujiangyanScene(
     ])
     cribGroup.add(new THREE.Line(ropeGeometry, cribRopeMaterial))
   }
-  const riverMat = new THREE.Mesh(
-    new THREE.PlaneGeometry(3.2, 6),
-    new THREE.MeshStandardMaterial({
-      color: 0xb89b62,
-      roughness: 0.98,
-      transparent: true,
-      opacity: 0.94,
-      side: THREE.DoubleSide,
-    }),
-  )
-  riverMat.rotation.x = -Math.PI / 2
-  riverMat.position.set(CRIB_X, 0.7, 6)
-  cribGroup.add(riverMat)
+
+
   cribGroup.visible = false
-  stage.scene.add(cribGroup)
+  maintenanceSite.add(cribGroup)
 
   const sedimentMounds: THREE.Mesh[] = []
   const sedimentRandom = mulberry32(31)
@@ -1287,7 +1087,7 @@ export function buildDujiangyanScene(
     mound.position.set(CRIB_X + 3 + sedimentRandom() * 5, 0.045, 4.4 + sedimentRandom() * 3.2)
     mound.receiveShadow = true
     mound.visible = false
-    stage.scene.add(mound)
+    dredgeSite.add(mound)
     sedimentMounds.push(mound)
   }
   const ironMarker = new THREE.Mesh(
@@ -1296,7 +1096,7 @@ export function buildDujiangyanScene(
   )
   ironMarker.position.set(CRIB_X + 5.4, 0.06, 6)
   ironMarker.visible = false
-  stage.scene.add(ironMarker)
+  dredgeSite.add(ironMarker)
   const exposedBed = new THREE.Mesh(
     new THREE.PlaneGeometry(10, 5.2),
     new THREE.MeshStandardMaterial({ color: 0x6b5b45, roughness: 0.98 }),
@@ -1304,7 +1104,7 @@ export function buildDujiangyanScene(
   exposedBed.rotation.x = -Math.PI / 2
   exposedBed.position.set(CRIB_X + 3.2, 0.04, 6)
   exposedBed.visible = false
-  stage.scene.add(exposedBed)
+  dredgeSite.add(exposedBed)
   const cribState = { drop: 0 }
   const sediment = { level: 0.3 }
 
@@ -1356,6 +1156,12 @@ export function buildDujiangyanScene(
   canalGroup.visible = false
 
   const fieldMaterials: THREE.MeshStandardMaterial[] = []
+  const floodplain = new THREE.Mesh(
+    polygonGeometry({ outer: [[19, 21], [28, 24], [37, 30], [41, 37], [35, 44], [26, 39], [21, 32]], holes: [] }),
+    new THREE.MeshBasicMaterial({ color: 0x588e8c, transparent: true, opacity: 0, depthWrite: false }),
+  )
+  floodplain.position.y = 0.095
+  stage.scene.add(floodplain)
   const fieldDryColors = [0xb4a86c, 0xa8a262, 0xbcae74, 0x9f9d64]
   const fieldGreenColors = [0x6f8f4f, 0x7fa05a, 0x88a862, 0x6a8a4a]
   const fieldRandom = mulberry32(61)
@@ -1377,17 +1183,17 @@ export function buildDujiangyanScene(
   }
   for (let row = 0; row < 6; row += 1) {
     for (let col = 0; col < 8; col += 1) {
-      const x = -30 + col * 8.5 + (fieldRandom() - 0.5) * 1.4
-      const z = 22 + row * 7 + (fieldRandom() - 0.5) * 1.4
-      if (canalDistance(x, z) < 2.6) continue
+      const x = 19 + col * 5.9 + (fieldRandom() - 0.5) * 1.4
+      const z = 27 + row * 5.9 + (fieldRandom() - 0.5) * 1.4
+      if (canalDistance(x, z) < 3.9 || getTerrainHeight(x, z) > 0.22) continue
       const material = new THREE.MeshStandardMaterial({
         color: fieldDryColors[(row + col) % fieldDryColors.length],
         roughness: 1,
       })
-      const field = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 3.8), material)
+      const field = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 3.7), material)
       field.rotation.x = -Math.PI / 2
       field.rotation.z = (fieldRandom() - 0.5) * 0.18
-      field.position.set(x, 0.012, z)
+      field.position.set(x, Math.max(0.012, getTerrainHeight(x, z) + 0.012), z)
       field.receiveShadow = true
       stage.scene.add(field)
       fieldMaterials.push(material)
@@ -1396,9 +1202,9 @@ export function buildDujiangyanScene(
   const houseWallMaterial = new THREE.MeshStandardMaterial({ color: 0xd8cdb2, roughness: 0.94 })
   const houseRoofMaterial = new THREE.MeshStandardMaterial({ color: 0x4b4a42, roughness: 0.92, flatShading: true })
   for (const [x, z] of [
-    [-22, 36],
-    [-8, 42],
-    [6, 54],
+    [23, 32],
+    [29, 41],
+    [47, 49],
     [26, 34],
     [34, 48],
   ] as const) {
@@ -1422,7 +1228,8 @@ export function buildDujiangyanScene(
     [8, 64, 1.2],
   ] as const) {
     const tree = createTree({ scale, color: 0x647f53 })
-    tree.position.set(x, 0, z)
+    if (contains(mapWater.inner, x, z) || contains(mapWater.outer, x, z)) continue
+    tree.position.set(x, Math.max(0, getTerrainHeight(x, z)), z)
     stage.scene.add(tree)
   }
 
@@ -1440,7 +1247,7 @@ export function buildDujiangyanScene(
     const worker = createFigure({ robe: 0x7a6a4f, trim: 0x4e4637, hat: 'douli', tool: 'hammer', scale: 0.92, shadow: false })
     worker.group.position.set(x, y, z)
     worker.group.rotation.y = rotation
-    stage.scene.add(worker.group)
+    gapSite.add(worker.group)
     gapWorkers.push(worker)
   }
   const damWorkers: Array<{ group: THREE.Group; rightArm: THREE.Group; head: THREE.Group }> = []
@@ -1453,7 +1260,7 @@ export function buildDujiangyanScene(
     const worker = createFigure({ robe: 0x7f6b4d, trim: 0x504737, hat: 'douli', scale: 0.94, shadow: false })
     worker.group.position.set(x, 0.4, z)
     worker.group.rotation.y = rotation
-    stage.scene.add(worker.group)
+    fishSite.add(worker.group)
     damWorkers.push(worker)
   }
   const farmers: Array<{ group: THREE.Group; rightArm: THREE.Group; head: THREE.Group }> = []
@@ -1479,32 +1286,34 @@ export function buildDujiangyanScene(
     worker.group.position.set(x, 0.02, z)
     worker.group.rotation.y = rotation
     worker.group.visible = false
-    stage.scene.add(worker.group)
+    dredgeSite.add(worker.group)
     dredgeWorkers.push(worker)
   }
 
   const castPositions: Record<string, [[number, number, number], [number, number, number]]> = {
-    overview: [[-2, 0, 10], [-0.8, 0, 11.2]],
-    survey: [[-4, 0, 12], [-2.6, 0, 13.2]],
-    bottleneck: [[8, 0, 9], [9.2, 0, 10.1]],
-    irrigation: [[8, 0, 26], [9.2, 0, 27.2]],
-    fishmouth: [[-2, 0, 3], [-0.8, 0, 4.1]],
-    split: [[-2, 0, 3], [-0.8, 0, 4.1]],
-    weir: [[24, 0, 4], [25.2, 0, 5.1]],
-    maintenance: [[36, 0, 6], [37.2, 0, 7.1]],
-    legacy: [[0, 0, 14], [1.2, 0, 15.1]],
+    overview: [[16, 0, 20], [17.2, 0, 21.1]],
+    survey: [[16, 0, 20], [17.2, 0, 21.1]],
+    bottleneck: [[13.1, 0, 18.1], [13.7, 0, 19.5]],
+    irrigation: [[26, 0, 35], [27.2, 0, 36.1]],
+    fishmouth: [[-9, 0, -21], [-8.1, 0, -20.1]],
+    split: [[-9, 0, -21], [-8.1, 0, -20.1]],
+    weir: [[9, 0, 21], [10.2, 0, 22.1]],
+    maintenance: [[2.8, 0, -2], [3.7, 0, -1]],
+    legacy: [[24, 0, 29], [25.2, 0, 30.1]],
   }
+
   function moveCast(preset: string, immediate = false): void {
     const home = castPositions[preset] ?? castPositions.overview
     for (const [figure, target, rotation] of [
       [libing, home[0], 0.7],
       [erlang, home[1], 0.9],
     ] as const) {
+      const y = Math.max(0, getTerrainHeight(target[0], target[2]))
       if (immediate) {
-        figure.group.position.set(target[0], 0, target[2])
+        figure.group.position.set(target[0], y, target[2])
         figure.group.rotation.y = rotation
       } else {
-        tw(figure.group.position, { x: target[0], z: target[2], duration: 1.2, ease: 'power2.inOut' })
+        tw(figure.group.position, { x: target[0], y, z: target[2], duration: 1.2, ease: 'power2.inOut' })
         tw(figure.group.rotation, { y: rotation, duration: 1.2 })
       }
     }
@@ -1623,22 +1432,23 @@ export function buildDujiangyanScene(
     if (label && label.element.textContent !== text) label.element.textContent = text
   }
 
-  addLabel('mountain', '玉垒山', [-2, 10, 16])
-  addLabel('minjiang', '岷江', [-42, 3.4, 0])
-  addLabel('gap', '宝瓶口', [GAP.x, 7.2, 10])
-  addLabel('isle', '离堆', [20, 4.6, 12])
-  addLabel('fishmouth', '鱼嘴', [2, 3.2, 0])
-  addLabel('cage', '竹笼 · 卵石', [0, 2.6, 0])
-  addLabel('split46', '四六分水', [2, 4.2, 4])
-  addLabel('sand28', '二八分沙', [5, 2.4, -4])
-  addLabel('inner', '内江', [8, 2.6, 6])
-  addLabel('outer', '外江', [8, 2.6, -6])
-  addLabel('weir', '飞沙堰', [WEIR_X, 2.6, 3.8])
-  addLabel('crib', '杩槎 · 截流', [CRIB_X, 2.9, 6])
-  addLabel('fqwo', '凤栖窝', [CRIB_X + 4, 2.2, 6])
-  addLabel('wotie', '卧铁', [CRIB_X + 5.4, 1.4, 6])
-  addLabel('plain', '成都平原', [8, 4, 40])
-  addLabel('canals', '左 · 中 · 右 三干渠', [14, 2.6, 28])
+  const at = ([x, z]: [number, number], y: number): [number, number, number] => [x, y, z]
+  addLabel('mountain', '玉垒山', at(anchors.mountain, 9))
+  addLabel('minjiang', '岷江', at(anchors.minjiang, 2.1))
+  addLabel('gap', '宝瓶口', at(anchors.gap, 4.4))
+  addLabel('isle', '离堆', at(anchors.isle, 2.2))
+  addLabel('fishmouth', '鱼嘴', at(anchors.fishmouth, 2.1))
+  addLabel('cage', '竹笼 · 卵石', at(inFrame(frames.fishmouth, [-4, 0]), 2))
+  addLabel('split46', '四六分水', [-8, 3.1, -20])
+  addLabel('sand28', '二八分沙', [-11, 1.9, -8])
+  addLabel('inner', '内江', [2, 1.6, -13])
+  addLabel('outer', '外江', [-14, 1.6, -16])
+  addLabel('weir', '飞沙堰', at(anchors.weir, 2.1))
+  addLabel('crib', '杩槎 · 截流', at(anchors.macha, 2.5))
+  addLabel('fqwo', '凤栖窝', at(anchors.dredge, 1.7))
+  addLabel('wotie', '卧铁', at(inFrame(frames.dredge, [CRIB_X + 5.4, 6]), 0.85))
+  addLabel('plain', '成都平原', at(anchors.plain, 2.5))
+  addLabel('canals', '引水入渠', [39, 1.8, 31])
   showLabel('mountain', true)
   showLabel('minjiang', true)
   showLabel('plain', true)
@@ -1646,29 +1456,33 @@ export function buildDujiangyanScene(
   stage.addHotspot({
     id: 'd_spot_ridge',
     label: '玉垒山嘴',
-    detail: '山体在岷江北岸，南侧临江；宝瓶口是山体南侧的一条侧向缺口，凿通后江水才会进入成都平原。',
+    detail: '玉垒山位于内江东侧；开凿山嘴形成宝瓶口，江水才能穿过缺口进入成都平原。',
     tone: 'info',
-    position: [8, 7, 10],
+    position: at(anchors.mountain, 8),
   })
   stage.addHotspot({
     id: 'd_spot_bend',
     label: '内江弯道',
-    detail: '内江沿山脚东流，弯道把表层清水推向宝瓶口，底层泥沙则更容易被飞沙堰甩回外江。',
+    detail: '内江顺山脚流向宝瓶口，弯道和飞沙堰配合，将一部分泥沙排回外江。',
     tone: 'info',
-    position: [6, 3, 6],
+    position: [8, 2, 10],
   })
   stage.addHotspot({
     id: 'd_spot_plain',
     label: '平原引水口',
-    detail: '宝瓶口一旦打开，内江水就从缺口北流，沿三条干渠自流进入成都平原。',
+    detail: '宝瓶口凿通后，内江水穿过缺口，沿干渠及支渠自流进入成都平原。',
     tone: 'info',
-    position: [10, 2.6, 32],
+    position: [25, 2, 25],
   })
   stage.hideHotspots()
 
   // 状态
   let currentSeason: 'normal' | 'dry' | 'flood' = 'normal'
   let currentWeir: 'none' | 'low' | 'mid' | 'high' = 'none'
+  // 三项实验选择：只喂给水理解析式（分水比、溢流量、抗冲安全系数），不额外建模。
+  let splitChoice: HydraulicInput['split'] = 'balanced'
+  let dikeMaterial: HydraulicInput['material'] = 'gabion'
+  let dredgeChoice: HydraulicInput['dredge'] = 'shallow'
   const overflow = { amount: 0 }
   const gapState = { value: 0 }
   const crackState = { value: 0 }
@@ -1699,6 +1513,17 @@ export function buildDujiangyanScene(
     if (!levee.visible) return
     setLabel('split46', currentSeason === 'flood' ? '四六分水 · 丰水内四外六' : '四六分水 · 枯水内六外四')
   }
+  // 水理解析式（dujiangyan-hydraulics）是四项定量实验的单一真源；
+  // 场景这边只借它判断「这一刻到底溢不溢流」，具体水头仍按场景自己的尺度做动画。
+  const hydraulicInput = (): HydraulicInput => ({
+    season: currentSeason,
+    weir: currentWeir === 'none' ? 'low' : currentWeir,
+    split: splitChoice,
+    material: dikeMaterial,
+    dredge: dredgeChoice,
+  })
+  const hydraulics = (): HydraulicResult => solveHydraulics(hydraulicInput())
+
   function setSeason(season: 'normal' | 'dry' | 'flood'): void {
     currentSeason = season
     hydro.targetLevel = SEASON_LEVEL[season]
@@ -1715,8 +1540,7 @@ export function buildDujiangyanScene(
     currentWeir = level
     weirGroup.visible = true
     const top = WEIR_TOP[level]
-    tw(weirWall.scale, { y: top, duration: 1.4, ease: 'power2.inOut' })
-    tw(weirCap.position, { y: top - 0.035, duration: 1.4, ease: 'power2.inOut' })
+    tw(weirWall.scale, { y: top / frames.weir.scale, duration: 1.4, ease: 'power2.inOut' })
     crestFoam.position.y = top
     spillMesh.visible = true
     spillBed.visible = true
@@ -1741,8 +1565,8 @@ export function buildDujiangyanScene(
         cage.rotation.set(0.5, CAGE_TARGETS[index][3], 0.18)
         tw(cage.position, { y: target.y, duration: 0.9, ease: 'power2.in' })
         tw(cage.rotation, { x: 0, y: CAGE_TARGETS[index][3], z: 0, duration: 0.9 })
-        later(480, () => splash(target.x, target.z, 0.75))
-      } else {
+        later(780, () => splash(...inFrame(frames.fishmouth, [target.x, target.z]), 0.75))
+      } else if (!animated) {
         cage.position.copy(target)
         cage.rotation.set(0, CAGE_TARGETS[index][3], 0)
         cagePlaced[index] = true
@@ -1773,7 +1597,17 @@ export function buildDujiangyanScene(
     life: number,
     spread: number,
     rise: number,
+    frame?: Frame,
   ): void {
+    if (frame) {
+      const position = inFrame(frame, [x, z])
+      x = position[0]
+      z = position[1]
+      y *= frame.scale
+      spread *= frame.scale
+      rise *= frame.scale
+      size *= frame.scale
+    }
     const positions: number[] = []
     const velocities: number[] = []
     const random = mulberry32(Math.round(x * 13 + z * 17 + count))
@@ -1847,21 +1681,27 @@ export function buildDujiangyanScene(
     showLabel('gap', true)
     setLabel('gap', '宝瓶口 · 开凿中')
     tw(fireLight, { intensity: 48, duration: 0.8 })
+    // 积薪先炙烤崖根：节理只是被烤开一点，真正的开裂要等泼水。
     tw(crackState, { value: 0.16, duration: 0.9 })
+    tw(sealHeat, { value: 0.92, duration: 1.1 })
+    tw(sealChar, { value: 0.55, duration: 1.4 })
     stage.shake(0.06, 0.35)
-    spawnPuff(GAP.x - 0.6, 2.2, 9.2, 0x8b8780, 34, 3.8, 5, 3.8, 1.2)
-    spawnPuff(GAP.x + 0.8, 1.4, 8.8, 0x6e6256, 18, 2.6, 3.4, 2.6, 0.9)
+    spawnPuff(GAP.x - 0.6, 2.2, 9.2, 0x8b8780, 34, 3.8, 5, 3.8, 1.2, frames.gap)
+    spawnPuff(GAP.x + 0.8, 1.4, 8.8, 0x6e6256, 18, 2.6, 3.4, 2.6, 0.9, frames.gap)
   }
 
   function quench(): void {
     fireGroup.visible = false
     tw(fireLight, { intensity: 0, duration: 0.4 })
+    // 冷水激裂：热石骤冷，节理在一声脆响里贯通，余热跟着白汽退掉，焦痕留下。
     tw(crackState, { value: 1, duration: 0.35 })
+    tw(sealHeat, { value: 0.18, duration: 0.7 })
+    tw(sealChar, { value: 0.72, duration: 1.1 })
     tw(quenchFlash, { intensity: 22, duration: 0.08, yoyo: true, repeat: 2 })
     stage.shake(0.16, 0.55)
-    spawnPuff(GAP.x, 1.4, 9.4, 0xf3f7f2, 52, 3.4, 2.6, 4.4, 1.6)
-    spawnPuff(GAP.x - 1.4, 1.4, 8.6, 0xe9efea, 24, 2.8, 2.4, 3.0, 1.3)
-    spawnPuff(GAP.x + 1.4, 2.2, 9.8, 0xdde8e2, 14, 2.4, 2.2, 2.4, 1.0)
+    spawnPuff(GAP.x, 1.4, 9.4, 0xf3f7f2, 52, 3.4, 2.6, 4.4, 1.6, frames.gap)
+    spawnPuff(GAP.x - 1.4, 1.4, 8.6, 0xe9efea, 24, 2.8, 2.4, 3.0, 1.3, frames.gap)
+    spawnPuff(GAP.x + 1.4, 2.2, 9.8, 0xdde8e2, 14, 2.4, 2.2, 2.4, 1.0, frames.gap)
   }
 
   function chisel(): void {
@@ -1875,41 +1715,35 @@ export function buildDujiangyanScene(
     stage.shake(0.2, 0.8)
     later(900, () => stage.shake(0.14, 0.5))
     later(1800, () => stage.shake(0.22, 0.7))
-    const random = mulberry32(51)
-    plugChunks.forEach((chunk, index) => {
-      const dir = chunk.dir === 0 ? (random() > 0.5 ? 1 : -1) : chunk.dir
-      tw(chunk.mesh.position, {
-        x: chunk.home.x + dir * (2.2 + random() * 3.8),
-        y: Math.max(0.2, chunk.home.y - 2.6 - random() * 3),
-        z: chunk.home.z + (random() - 0.5) * 4,
-        duration: 1.3 + random() * 0.8,
-        delay: index * 0.045,
-        ease: 'power2.in',
-      })
-      tw(chunk.mesh.rotation, {
-        x: (random() - 0.5) * 1.2,
-        y: (random() - 0.5) * 1.0,
-        z: (random() - 0.5) * 1.3,
-        duration: 1.4 + random() * 0.7,
-        delay: index * 0.045,
-        ease: 'power2.in',
+    // 逐片撬剥：从迎水第一片开始，每片先裂开、再整体外倾坍落。
+    sealNose.slabs.forEach((_slab, index) => {
+      later(index * 420, () => {
+        const proxy = { value: 0 }
+        tw(proxy, {
+          value: 1,
+          duration: 1.15,
+          ease: 'power2.in',
+          onUpdate: () => sealNose.peel(index, proxy.value),
+        })
       })
     })
     later(700, () => {
       gapWater.visible = true
       tw(gapWaterMaterial.uniforms.uOpacity, { value: 0.92, duration: 0.8 })
       gapChannel.flow.visible = true
+      canalGroup.visible = true
+      for (const canal of canalChannels) tw(canal.material.uniforms.uOpacity, { value: 0.9, duration: 1.6 })
     })
     later(1100, () => {
-      splash(GAP.x, 8.4, 1.5)
-      spawnPuff(GAP.x, 1, 9.2, 0xb7ac96, 54, 3.4, 4.2, 0.9, 1.0)
-      splash(GAP.x, 6.4, 1.1)
+      splash(...inFrame(frames.gap, [GAP.x, 8.4]), 1.05)
+      spawnPuff(GAP.x, 1, 9.2, 0xb7ac96, 54, 3.4, 4.2, 0.9, 1.0, frames.gap)
+      splash(...inFrame(frames.gap, [GAP.x, 6.4]), 0.8)
     })
     later(2400, () => {
       scaffold.visible = false
       for (const worker of gapWorkers) worker.group.visible = false
-      plugGroup.visible = false
-      crackCore.visible = false
+      sealNose.group.visible = false
+      fireBeds.visible = false
     })
   }
 
@@ -1934,8 +1768,8 @@ export function buildDujiangyanScene(
     stage.shake(0.1, 0.45)
     cribSplashPoints.forEach(([x, y, z], index) => {
       later(180 + index * 60, () => {
-        splash(x, z, 0.62)
-        spawnPuff(x, y, z, 0xcfe6e2, 6, 1.0, 1.1, 0.6, 0.45)
+        splash(...inFrame(frames.maintenance, [x, z]), 0.62)
+        spawnPuff(x, y, z, 0xcfe6e2, 6, 1.0, 1.1, 0.6, 0.45, frames.maintenance)
       })
     })
     currentSeason = 'dry'
@@ -1955,8 +1789,8 @@ export function buildDujiangyanScene(
   function dredge(): void {
     tw(sediment, { level: 0, duration: 1.8, ease: 'power2.inOut' })
     for (const [index, mound] of sedimentMounds.entries()) {
-      later(320 + index * 90, () => spawnPuff(mound.position.x, 0.15, mound.position.z, 0xa08d6d, 10, 1.6, 2, 1.4, 0.5))
-      later(520 + index * 90, () => splash(mound.position.x, mound.position.z, 0.42))
+      later(320 + index * 90, () => spawnPuff(mound.position.x, 0.15, mound.position.z, 0xa08d6d, 10, 1.6, 2, 1.4, 0.5, frames.dredge))
+      later(520 + index * 90, () => splash(...inFrame(frames.dredge, [mound.position.x, mound.position.z]), 0.42))
     }
     later(700, () => {
       ironMarker.visible = true
@@ -1983,13 +1817,13 @@ export function buildDujiangyanScene(
     later(260, startSurge)
     later(300, () => {
       cribSplashPoints.forEach(([x, , z], index) => {
-        later(index * 50, () => splash(x, z, 0.7))
+        later(index * 50, () => splash(...inFrame(frames.maintenance, [x, z]), 0.7))
       })
     })
   }
 
   function celebrate(): void {
-    if (currentWeir === 'none') setWeir('low')
+    setWeir('low')
     currentSeason = 'flood'
     hydro.targetLevel = SEASON_LEVEL.flood
     hydro.targetInner = 0.4
@@ -2048,12 +1882,11 @@ export function buildDujiangyanScene(
     smokePoints.visible = false
     scaffold.visible = true
     for (const worker of gapWorkers) worker.group.visible = true
-    for (const chunk of plugChunks) {
-      chunk.mesh.position.copy(chunk.home)
-      chunk.mesh.rotation.copy(chunk.homeRotation)
-    }
-    plugGroup.visible = true
-    crackCore.visible = true
+    sealNose.reset()
+    sealNose.group.visible = true
+    sealHeat.value = 0
+    sealChar.value = 0
+    fireBeds.visible = true
     gapWater.visible = false
     gapWaterMaterial.uniforms.uOpacity.value = 0
     gapChannel.flow.visible = false
@@ -2064,6 +1897,7 @@ export function buildDujiangyanScene(
     levee.scale.y = 0.001
     weirGroup.visible = false
     currentWeir = 'none'
+    weirWall.scale.y = 0.001
     overflow.amount = 0
     spillMesh.visible = false
     spillFlow.visible = false
@@ -2088,6 +1922,9 @@ export function buildDujiangyanScene(
     sediment.level = 0.3
     for (const worker of dredgeWorkers) worker.group.visible = false
     canalGroup.visible = false
+    for (const canal of canalChannels) canal.material.uniforms.uOpacity.value = 0
+    floodplain.material.opacity = 0
+    floodplain.visible = false
     resetFields()
     hydro.level = SEASON_LEVEL.dry
     hydro.inner = 0.6
@@ -2105,6 +1942,8 @@ export function buildDujiangyanScene(
     stage.hideHotspots()
     for (const label of labels.keys()) showLabel(label, false)
     for (const label of ['mountain', 'plain', 'minjiang']) showLabel(label, true)
+    lastInnerPercent = -1
+    lastRefluxText = ''
     setLabel('inner', '内江')
     setLabel('outer', '外江')
     moveCast('overview', true)
@@ -2120,6 +1959,9 @@ export function buildDujiangyanScene(
     hydro.flood += (hydro.targetFlood - hydro.flood) * ease
     hydro.backwater += (hydro.targetBackwater - hydro.backwater) * ease
     const innerLevel = hydro.level + hydro.backwater
+    const inundation = hydro.flood * (!levee.visible ? 0.62 : currentWeir === 'high' ? 0.48 : 0)
+    floodplain.material.opacity += (inundation - floodplain.material.opacity) * ease
+    floodplain.visible = floodplain.material.opacity > 0.01
 
     for (const channel of [upstreamChannel, outerChannel]) channel.mesh.position.y = hydro.level
     innerChannel.mesh.position.y = innerLevel - cribState.drop
@@ -2146,26 +1988,15 @@ export function buildDujiangyanScene(
       for (const canal of canalChannels) canal.flow.visible = false
     }
 
-    // 岩塞裂缝：未崩落时，按 crackState 把 12 块岩体向外错开，缝隙即真实裂纹。
-    if (!plugFalling) {
-      for (const chunk of plugChunks) {
-        const offset = crackState.value * 0.46
-        chunk.mesh.position.set(
-          chunk.home.x + chunk.dir * offset,
-          chunk.home.y + Math.sin(chunk.home.z * 3.1) * crackState.value * 0.08,
-          chunk.home.z + (chunk.home.z > 12 ? 0.16 : -0.16) * crackState.value,
-        )
-        chunk.mesh.rotation.set(
-          chunk.homeRotation.x + crackState.value * 0.04 * chunk.dir,
-          chunk.homeRotation.y,
-          chunk.homeRotation.z - crackState.value * 0.055 * chunk.dir,
-        )
-      }
-    }
+    // 岩塞：炙烤与熏黑是着色器里的连续量；裂缝则由各片沿法向外错、节理带显隐来表现。
+    sealNose.setHeat(sealHeat.value)
+    sealNose.setChar(sealChar.value)
+    if (!plugFalling) sealNose.setCrack(crackState.value)
 
     // 飞沙堰溢流
-    const weirTop = currentWeir === 'none' ? Number.POSITIVE_INFINITY : WEIR_TOP[currentWeir]
-    const overflowTarget = currentWeir === 'none' ? 0 : THREE.MathUtils.clamp((innerLevel - weirTop) / 0.3, 0, 1)
+    const weirTop = weirWall.scale.y * frames.weir.scale
+    const weirSpilling = currentWeir !== 'none' && hydraulics().spillQ > 0.02
+    const overflowTarget = weirSpilling ? THREE.MathUtils.clamp((innerLevel - weirTop) / 0.34, 0, 1) : 0
     overflow.amount += (overflowTarget - overflow.amount) * ease
     const spilling = overflow.amount > 0.03
     spillMesh.visible = spilling
@@ -2176,10 +2007,10 @@ export function buildDujiangyanScene(
     spillMaterial.uniforms.uFoam.value = 0.05 + overflow.amount * 0.65
     spillFallMaterial.opacity = 0.52 * overflow.amount
     crestFoamMaterial.opacity = 0.62 * overflow.amount
-    spillMesh.position.y = hydro.level + 0.04
+    spillMesh.position.y = (hydro.level + 0.04) / frames.weir.scale - 0.12
     spillFall.position.y = 0.06 + Math.max(0.12, innerLevel - 0.06) / 2
     spillFall.scale.y = Math.max(0.12, innerLevel - 0.06) / 1.4
-    crestFoam.position.y = Math.max(weirTop === Number.POSITIVE_INFINITY ? 0.3 : weirTop, innerLevel + 0.045)
+    crestFoam.position.y = (Math.max(weirTop, innerLevel) + 0.045) / frames.weir.scale
     if (spilling) {
       for (let index = 0; index < 16; index += 1) {
         const data = spillFlowData[index]
@@ -2188,7 +2019,7 @@ export function buildDujiangyanScene(
         spillCurve.getTangentAt(t, tangent)
         side.set(-tangent.z, 0, tangent.x).normalize()
         const lane = data.lane * 5.6
-        dummy.position.set(point.x + side.x * lane, hydro.level + 0.06, point.z + side.z * lane)
+        dummy.position.set(point.x + side.x * lane, (hydro.level + 0.06) / frames.weir.scale, point.z + side.z * lane)
         dummy.quaternion.setFromUnitVectors(forward, tangent)
         dummy.scale.set(0.06 * data.size, 0.018, 0.45)
         dummy.updateMatrix()
@@ -2349,9 +2180,11 @@ export function buildDujiangyanScene(
         buildCages()
         break
       case 'dujiangyan:split:dry':
+        splitChoice = 'inner'
         setSeason('dry')
         break
       case 'dujiangyan:split:flood':
+        splitChoice = 'outer'
         setSeason('flood')
         break
       case 'dujiangyan:weir:low':
@@ -2367,6 +2200,7 @@ export function buildDujiangyanScene(
         installCribs()
         break
       case 'dujiangyan:dredge':
+        dredgeChoice = 'deep'
         dredge()
         break
       case 'dujiangyan:restore':
